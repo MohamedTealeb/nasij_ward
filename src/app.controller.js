@@ -18,7 +18,7 @@ const port=process.env.PORT
   await connectDB()
   //Routes
   app.get('/',(req,res)=>{
-    res.json("app runn")
+    res.json("app run nasij_ward")
   })
 
   app.all('{/*dummy}',(req,res)=>{
