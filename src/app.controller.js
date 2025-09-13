@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv'
 dotenv.config({path:path.join('./.env')})
 import express from 'express'
 import cors from 'cors'
+import authController from './modules/auth/auth.controller.js'
+
 import connectDB from './config/connection.db.js';
 
 
@@ -20,6 +22,7 @@ const port=process.env.PORT
   app.get('/',(req,res)=>{
     res.json("app run nasij_ward")
   })
+   app.use('/auth',authController)
 
   app.all('{/*dummy}',(req,res)=>{
     res.status(404).json({message:"Page not found"})
