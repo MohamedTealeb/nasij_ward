@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt"
-export const generateHash=({plaintext="",saltRounds=process.env}={})=>{
+export const generateHash=({plaintext="",saltRounds=process.env.SALT}={})=>{
     return bcrypt.hashSync(plaintext,parseInt(saltRounds))
 }
 export const compareHash=({plaintext,hash}={})=>{
