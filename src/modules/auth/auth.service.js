@@ -1,7 +1,9 @@
 import { UserModel } from "../../config/models/user.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 import { generateEncryption } from "../../utils/security/encryption.security.js";
-import { generateHash } from "../../utils/security/hash.security.js";
+import { compareHash, generateHash } from "../../utils/security/hash.security.js";
+import { generateLogin } from '../../utils/security/token.security.js'
+
 
 
 
@@ -32,3 +34,24 @@ export const signup=asyncHandler(async(req,res,next)=>{
 
 
 })
+export const login = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    return next(new Error("user not found", { cause: 404 }));
+  }
+
+  const match = compareHash({ plaintext: password, hash: user.password });
+  if (!match) {
+    return next(new Error("invalid login data", { cause: 401 }));
+  }
+
+  const credentials = await generateLogin({ user });
+
+  return successResponse({
+    res,
+    message: "Login successful",
+    data: { user, credentials },
+  });
+});
