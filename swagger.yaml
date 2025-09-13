@@ -1,0 +1,366 @@
+openapi: 3.0.0
+info:
+  title: Nasij Ward API
+  version: 1.0.0
+  description: A comprehensive API for the Nasij Ward application with user authentication and management features.
+  contact:
+    name: API Support
+    email: support@nasijward.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.nasijward.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration endpoints
+  - name: General
+    description: General application endpoints
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter JWT token in the format Bearer <token>
+
+  schemas:
+    User:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+        - phone
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the user
+          example: "64b8c8f5e123456789abcdef"
+        firstName:
+          type: string
+          minLength: 3
+          maxLength: 20
+          description: User first name
+          example: "John"
+        lastName:
+          type: string
+          minLength: 3
+          maxLength: 20
+          description: User last name
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d]{8,}$"
+          description: User password (at least 8 characters, 1 uppercase, 1 lowercase, 1 number)
+          example: "Password123"
+        phone:
+          type: string
+          pattern: "^(002|\\+2)?01[0125][0-9]{8}$"
+          description: Egyptian phone number
+          example: "01234567890"
+        gender:
+          type: string
+          enum: [male, female]
+          default: male
+          description: User gender
+        role:
+          type: string
+          enum: [user, admin]
+          default: user
+          description: User role
+        confirmEmail:
+          type: string
+          format: date-time
+          description: Email confirmation timestamp
+        confirmEmailOtp:
+          type: string
+          description: OTP for email confirmation
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    UserSignup:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+        - phone
+      properties:
+        firstName:
+          type: string
+          minLength: 3
+          description: User first name
+          example: "John"
+        lastName:
+          type: string
+          minLength: 3
+          description: User last name
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d]{8,}$"
+          description: Password (min 8 chars, 1 uppercase, 1 lowercase, 1 number)
+          example: "Password123"
+        phone:
+          type: string
+          pattern: "^(002|\\+2)?01[0125][0-9]{8}$"
+          description: Egyptian phone number
+          example: "01234567890"
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          description: User password
+          example: "Password123"
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+        data:
+          type: object
+          description: Response data
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "An error occurred"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                example: "body"
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: "Validation error message"
+                    path:
+                      type: string
+                      example: "fieldName"
+
+    LoginCredentials:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: JWT refresh token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+  responses:
+    ValidationError:
+      description: Validation Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Page not found"
+
+    Unauthorized:
+      description: Unauthorized access
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Invalid login data"
+
+    UserAlreadyExists:
+      description: User already exists
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User already exists"
+
+paths:
+  /:
+    get:
+      summary: Health check endpoint
+      tags: [General]
+      responses:
+        '200':
+          description: API is running successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "app run nasij_ward"
+
+  /auth/signup:
+    post:
+      summary: Register a new user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSignup'
+            example:
+              firstName: "John"
+              lastName: "Doe"
+              email: "john.doe@example.com"
+              password: "Password123"
+              phone: "01234567890"
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          NewUser:
+                            $ref: '#/components/schemas/User'
+              example:
+                success: true
+                message: "User created successfully"
+                data:
+                  NewUser:
+                    _id: "64b8c8f5e123456789abcdef"
+                    firstName: "John"
+                    lastName: "Doe"
+                    email: "john.doe@example.com"
+                    gender: "male"
+                    role: "user"
+                    createdAt: "2023-07-20T10:30:00.000Z"
+                    updatedAt: "2023-07-20T10:30:00.000Z"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/UserAlreadyExists'
+
+  /auth/login:
+    post:
+      summary: Authenticate user and get access tokens
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+            example:
+              email: "john.doe@example.com"
+              password: "Password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+                          credentials:
+                            $ref: '#/components/schemas/LoginCredentials'
+              example:
+                success: true
+                message: "Login successful"
+                data:
+                  user:
+                    _id: "64b8c8f5e123456789abcdef"
+                    firstName: "John"
+                    lastName: "Doe"
+                    email: "john.doe@example.com"
+                    gender: "male"
+                    role: "user"
+                  credentials:
+                    accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "user not found"

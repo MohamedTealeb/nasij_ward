@@ -4,7 +4,7 @@ This document provides information about the Swagger API documentation setup for
 
 ## Overview
 
-Swagger UI has been integrated into your Node.js Express application to provide interactive API documentation. The documentation includes all available endpoints, request/response schemas, and examples.
+Swagger UI has been integrated into your Node.js Express application using a simple YAML configuration file. The documentation includes all available endpoints, request/response schemas, and examples.
 
 ## Access the Documentation
 
@@ -65,68 +65,56 @@ JWT Bearer token authentication is configured. To test protected endpoints:
 ## File Structure
 
 ```
-src/
-├── swagger/                   # Dedicated Swagger folder
-│   ├── swagger.config.js     # Main Swagger configuration
-│   ├── index.js              # Central exports
-│   ├── responses.js          # Common response definitions
-│   ├── schemas/              # Data schemas
-│   │   ├── index.js         # Schema exports
-│   │   ├── user.schemas.js  # User-related schemas
-│   │   └── common.schemas.js # Common schemas
-│   └── docs/                 # Endpoint documentation
-│       ├── auth.docs.js     # Authentication endpoints
-│       └── general.docs.js  # General endpoints
-├── modules/
-│   └── auth/
-│       └── auth.controller.js # Clean controller without Swagger comments
-└── app.controller.js          # Main app with Swagger middleware
+project-root/
+├── swagger.yaml              # Complete Swagger documentation in YAML format
+├── src/
+│   ├── modules/
+│   │   └── auth/
+│   │       └── auth.controller.js # Clean controller
+│   └── app.controller.js     # Main app with Swagger middleware
+└── package.json              # Dependencies including js-yaml
 ```
 
 ## Customization
 
 ### Adding New Endpoints
 
-1. Add Swagger JSDoc comments above your route handlers:
+Simply edit the `swagger.yaml` file and add your new endpoint under the `paths` section:
 
-```javascript
-/**
- * @swagger
- * /your-endpoint:
- *   post:
- *     summary: Your endpoint description
- *     tags: [YourTag]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/YourSchema'
- *     responses:
- *       200:
- *         description: Success response
- */
-router.post('/your-endpoint', yourHandler);
+```yaml
+paths:
+  /your-new-endpoint:
+    post:
+      summary: Your endpoint description
+      tags: [YourTag]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YourSchema'
+      responses:
+        '200':
+          description: Success response
 ```
-
-2. Update the `apis` array in `swagger.config.js` to include your new controller files.
 
 ### Adding New Schemas
 
-Add new schema definitions to the `components.schemas` section in `swagger.config.js`:
+Add new schema definitions to the `components.schemas` section in `swagger.yaml`:
 
-```javascript
-YourNewSchema: {
-  type: 'object',
-  required: ['field1', 'field2'],
-  properties: {
-    field1: {
-      type: 'string',
-      description: 'Field description',
-      example: 'Example value'
-    }
-  }
-}
+```yaml
+components:
+  schemas:
+    YourNewSchema:
+      type: object
+      required:
+        - field1
+        - field2
+      properties:
+        field1:
+          type: string
+          description: Field description
+          example: "Example value"
 ```
 
 ## Environment Configuration

@@ -4,7 +4,11 @@ dotenv.config({path:path.join('./.env')})
 import express from 'express'
 import cors from 'cors'
 import swaggerUi from 'swagger-ui-express'
-import swaggerSpecs from './swagger/swagger.config.js'
+import fs from 'fs'
+import yaml from 'js-yaml'
+
+// Load YAML file
+const swaggerDocument = yaml.load(fs.readFileSync('./swagger.yaml', 'utf8'))
 import authController from './modules/auth/auth.controller.js'
 
 import connectDB from './config/connection.db.js';
@@ -22,7 +26,7 @@ const port=process.env.PORT
   await connectDB()
   
   // Swagger Documentation
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Nasij Ward API Documentation',
