@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv'
 dotenv.config({path:path.join('./.env')})
 import express from 'express'
 import cors from 'cors'
+import swaggerUi from 'swagger-ui-express'
+import swaggerSpecs from './swagger/swagger.config.js'
 import authController from './modules/auth/auth.controller.js'
 
 import connectDB from './config/connection.db.js';
@@ -18,15 +20,27 @@ const port=process.env.PORT
 
  //DB
   await connectDB()
-  //Routes
+  
+  // Swagger Documentation
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Nasij Ward API Documentation',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true
+    }
+  }));
+
+  //Routes - documentation is in /swagger/docs/ folder
   app.get('/',(req,res)=>{
     res.json("app run nasij_ward")
   })
    app.use('/auth',authController)
 
-  app.all('{/*dummy}',(req,res)=>{
+  app.use((req,res)=>{
     res.status(404).json({message:"Page not found"})
-})
+  })
 
  app.listen(port,()=>{
         console.log(`Example app listening on port ${port}`)
