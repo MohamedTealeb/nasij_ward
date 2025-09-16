@@ -1,4 +1,7 @@
 import { CategoryModel } from "../../config/models/category.model.js";
+import fs from "fs";
+import path from "path";
+
 import { asyncHandler, successResponse } from "../../utils/response.js";
 
 export const allCategories = asyncHandler(async (req, res, next) => {
@@ -17,8 +20,9 @@ export const allCategories = asyncHandler(async (req, res, next) => {
 
 export const addCategory = asyncHandler(async (req, res, next) => {
   const { name, description } = req.body;
+   const image = req.file ? `/uploads/categories/${req.file.filename}` : "";
 
-  const category = await CategoryModel.create({ name, description });
+  const category = await CategoryModel.create({ name, description,image });
 
   return successResponse({
     res,
@@ -45,12 +49,30 @@ export const singleCategory = asyncHandler(async (req, res, next) => {
 export const updateCategory = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-  const category = await CategoryModel.findByIdAndUpdate(id, req.body, {
-    new: true,
-  });
-  if (!category) {
+  const oldCategory = await CategoryModel.findById(id);
+  if (!oldCategory) {
     return next(new Error("Category not found", { cause: 404 }));
   }
+
+  const updateData = { ...req.body };
+
+  if (req.file) {
+    if (oldCategory.image) {
+      const oldImagePath = path.join(process.cwd(), oldCategory.image);
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Error deleting old image:", err.message);
+        }
+      });
+    }
+
+    updateData.image = `/uploads/categories/${req.file.filename}`;
+  }
+
+  const category = await CategoryModel.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  });
 
   return successResponse({
     res,
@@ -58,6 +80,7 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
     data: { category },
   });
 });
+
 
 export const removeCategory = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
