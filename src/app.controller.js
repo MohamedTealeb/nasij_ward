@@ -12,6 +12,7 @@ const swaggerDocument = yaml.load(fs.readFileSync('./swagger.yaml', 'utf8'))
 import authController from './modules/auth/auth.controller.js'
 import userController from './modules/user/user.controller.js'
 import categoryController from './modules/category/category.controller.js'
+import prodductController from './modules/product/product.controller.js'
 
 import connectDB from './config/connection.db.js';
 
@@ -45,6 +46,7 @@ const port=process.env.PORT
    app.use('/auth',authController)
    app.use('/user',userController)
    app.use("/category",categoryController)
+   app.use("/product",prodductController)
 
 
   app.use((req,res)=>{
