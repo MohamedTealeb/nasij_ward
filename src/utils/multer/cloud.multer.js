@@ -6,22 +6,15 @@ import fs from "fs";
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     try {
-      // لازم يوصلك اسم الكاتيجوري من body أو params
-      const categoryName = req.body.name || req.params.name;
-
-      if (!categoryName) {
-        return cb(new Error("Category name is required"), null);
-      }
-
       let uploadPath;
 
       if (req.baseUrl.includes('/category')) {
-        // رفع صورة الكاتيجوري نفسها
-        uploadPath = path.join("uploads", "categories", categoryName);
+        // رفع صورة الكاتيجوري - استخدم مجلد عام للكاتيجوريز
+        uploadPath = path.join("uploads", "categories");
       }
       else if (req.baseUrl.includes('/product')) {
-        // رفع منتجات تابعة للكاتيجوري
-        uploadPath = path.join("uploads", "categories", categoryName, "products");
+        // رفع منتجات - استخدم مجلد عام للمنتجات
+        uploadPath = path.join("uploads", "products");
       }
       else {
         uploadPath = path.join("uploads", "general");

@@ -13,7 +13,6 @@ router.post(
   productService.addProduct
 );
 router.get("/all", productService.allProducts);
-router.get("/:id", productService.singleProduct);
 
 
 router.put(

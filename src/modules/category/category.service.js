@@ -36,9 +36,13 @@ export const allCategories = asyncHandler(async (req, res, next) => {
 
 export const addCategory = asyncHandler(async (req, res, next) => {
   const { name, description } = req.body;
-   const image = req.file ? `/uploads/categories/${req.file.filename}` : "";
+  
+  console.log("Add category - Request body:", req.body);
+  console.log("Add category - Request file:", req.file);
+  
+  const image = req.file ? `/uploads/categories/${req.file.filename}` : "";
 
-  const category = await CategoryModel.create({ name, description,image });
+  const category = await CategoryModel.create({ name, description, image });
 
   return successResponse({
     res,
@@ -52,15 +56,21 @@ export const addCategory = asyncHandler(async (req, res, next) => {
 export const updateCategory = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
+  // 🟢 تأكد من وجود الكاتيجوري
   const oldCategory = await CategoryModel.findById(id);
   if (!oldCategory) {
     return next(new Error("Category not found", { cause: 404 }));
   }
 
+  // 🟢 اطبع البيانات اللي جاية للتأكد
+  console.log("Request body:", req.body);
+  console.log("Request file:", req.file);
+
   const updateData = { ...req.body };
 
+  // 🟢 لو في صورة جديدة
   if (req.file) {
-    // 🟢 امسح الصورة القديمة لو موجودة
+    // امسح الصورة القديمة لو موجودة
     if (oldCategory.image) {
       const oldImagePath = path.join(process.cwd(), oldCategory.image);
       fs.unlink(oldImagePath, (err) => {
@@ -70,19 +80,18 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // 🟢 خزّن المسار الجديد في الـ DB (forward slashes)
-    updateData.image = path.posix.join(
-      "uploads",
-      "categories",
-      oldCategory.name,
-      req.file.filename
-    );
+    // استخدم نفس الطريقة اللي في الـ add
+    updateData.image = `/uploads/categories/${req.file.filename}`;
   }
+
+  console.log("Update data:", updateData);
 
   const category = await CategoryModel.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   });
+
+  console.log("Updated category:", category);
 
   return successResponse({
     res,

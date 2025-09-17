@@ -1,6 +1,8 @@
 import { ProductModel } from "../../config/models/product.model.js";
 import { CategoryModel } from "../../config/models/category.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
+import fs from "fs";
+import path from "path";
 
 export const allProducts = asyncHandler(async (req, res, next) => {
   const { id, name, category } = req.query;
@@ -33,12 +35,21 @@ export const allProducts = asyncHandler(async (req, res, next) => {
 });
 export const addProduct = asyncHandler(async (req, res, next) => {
   const { name, description, price, category } = req.body;
-  const image = req.file ? `/uploads/products/${req.file.filename}` : "";
+  
+  console.log("Add product - Request body:", req.body);
+  console.log("Add product - Request file:", req.file);
 
   // check category exists
   const categoryExists = await CategoryModel.findById(category);
   if (!categoryExists) {
     return next(new Error("Category not found", { cause: 404 }));
+  }
+
+  // إنشاء الـ image path بناءً على الـ multer configuration
+  let image = "";
+  if (req.file) {
+    // المسار الصحيح حسب الـ multer config الجديد
+    image = `/uploads/products/${req.file.filename}`;
   }
 
   const product = await ProductModel.create({
@@ -56,29 +67,39 @@ export const addProduct = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const singleProduct = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
 
-  const product = await ProductModel.findById(id).populate("category");
-  if (!product) {
-    return next(new Error("Product not found", { cause: 404 }));
-  }
-
-  return successResponse({
-    res,
-    message: "Product fetched successfully",
-    data: { product },
-  });
-});
 
 export const updateProduct = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
+  
+  console.log("Update product - Request body:", req.body);
+  console.log("Update product - Request file:", req.file);
+
+  // 🟢 تأكد من وجود المنتج
+  const oldProduct = await ProductModel.findById(id).populate("category");
+  if (!oldProduct) {
+    return next(new Error("Product not found", { cause: 404 }));
+  }
+
   const updateData = { ...req.body };
 
+  // 🟢 لو في صورة جديدة
   if (req.file) {
+    // امسح الصورة القديمة لو موجودة
+    if (oldProduct.image) {
+      const oldImagePath = path.join(process.cwd(), oldProduct.image);
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error("Error deleting old product image:", err.message);
+        }
+      });
+    }
+
+    // إنشاء المسار الصحيح للصورة الجديدة
     updateData.image = `/uploads/products/${req.file.filename}`;
   }
 
+  // 🟢 لو في كاتيجوري جديد، تأكد من وجوده
   if (updateData.category) {
     const categoryExists = await CategoryModel.findById(updateData.category);
     if (!categoryExists) {
@@ -86,13 +107,14 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
     }
   }
 
+  console.log("Update data:", updateData);
+
   const product = await ProductModel.findByIdAndUpdate(id, updateData, {
     new: true,
+    runValidators: true,
   }).populate("category");
 
-  if (!product) {
-    return next(new Error("Product not found", { cause: 404 }));
-  }
+  console.log("Updated product:", product);
 
   return successResponse({
     res,

@@ -19,6 +19,7 @@ router.put(
   "/:id",
   authMiddleware,
   checkRole("admin"),
+  upload.single("image"),
   categoryService.updateCategory
 );
 
