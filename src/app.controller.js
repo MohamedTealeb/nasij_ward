@@ -13,6 +13,8 @@ import authController from './modules/auth/auth.controller.js'
 import userController from './modules/user/user.controller.js'
 import categoryController from './modules/category/category.controller.js'
 import prodductController from './modules/product/product.controller.js'
+import wishlistController from './modules/wishlist/wishlist.controler.js'
+import CartController from './modules/cart/cart.controller.js'
 
 import connectDB from './config/connection.db.js';
 import { startImageChecker } from './utils/cron/cleanup.cron.js';
@@ -48,6 +50,8 @@ const port=process.env.PORT
    app.use('/user',userController)
    app.use("/category",categoryController)
    app.use("/product",prodductController)
+   app.use("/wishlist",wishlistController)
+   app.use("/cart",CartController)
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use((req,res)=>{

@@ -14,7 +14,14 @@ const userSchema=new mongoose.Schema({
     }},
     confirmEmail:{Date},
     role:{type:String,enum:["user","admin"],default:"user"},
-       confirmEmailOtp:{type:String},
+    //    confirmEmailOtp:{type:String},
+           wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+ cart: [
+      {
+        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        quantity: { type: Number, default: 1 },
+      },
+    ],
 
 
 

@@ -28,8 +28,8 @@ const categorySchema=new mongoose.Schema({
 
 })
 categorySchema.virtual("Product", {
-  ref: "Product",          // الموديل اللي عايز تعمله populate
-  localField: "_id",       // ده من الكاتيجوري
-  foreignField: "category" // ده من البرودكت
+  ref: "Product",          
+  localField: "_id",      
+  foreignField: "category" 
 });
 export const CategoryModel = mongoose.model("Category", categorySchema);
