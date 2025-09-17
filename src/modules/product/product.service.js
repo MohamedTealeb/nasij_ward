@@ -3,7 +3,23 @@ import { CategoryModel } from "../../config/models/category.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 
 export const allProducts = asyncHandler(async (req, res, next) => {
-  const products = await ProductModel.find().populate("category");
+  const { id, name, category } = req.query;
+
+  let filter = {};
+
+  if (id) {
+    filter._id = id;
+  }
+
+  if (name) {
+    filter.name = { $regex: name, $options: "i" }; 
+  }
+
+  if (category) {
+    filter.category = category; 
+  }
+
+  const products = await ProductModel.find(filter).populate("category");
 
   if (!products || products.length === 0) {
     return next(new Error("No products found", { cause: 404 }));
@@ -15,7 +31,6 @@ export const allProducts = asyncHandler(async (req, res, next) => {
     data: { products },
   });
 });
-
 export const addProduct = asyncHandler(async (req, res, next) => {
   const { name, description, price, category } = req.body;
   const image = req.file ? `/uploads/products/${req.file.filename}` : "";

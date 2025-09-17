@@ -15,6 +15,7 @@ import categoryController from './modules/category/category.controller.js'
 import prodductController from './modules/product/product.controller.js'
 
 import connectDB from './config/connection.db.js';
+import { startImageChecker } from './utils/cron/cleanup.cron.js';
 
 
 export const Bootstrap=async()=>{
@@ -47,11 +48,13 @@ const port=process.env.PORT
    app.use('/user',userController)
    app.use("/category",categoryController)
    app.use("/product",prodductController)
-
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use((req,res)=>{
     res.status(404).json({message:"Page not found"})
   })
+
+startImageChecker();
 
  app.listen(port,()=>{
         console.log(`Example app listening on port ${port}`)

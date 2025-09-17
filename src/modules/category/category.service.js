@@ -5,7 +5,23 @@ import path from "path";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 
 export const allCategories = asyncHandler(async (req, res, next) => {
-  const categories = await CategoryModel.find();
+  const { id, name, product } = req.query; 
+
+  let filter = {};
+
+  if (id) {
+    filter._id = id;
+  }
+
+  if (name) {
+    filter.name = { $regex: name, $options: "i" }; 
+  }
+
+  if (product) {
+    filter.products = product;
+  }
+
+  const categories = await CategoryModel.find(filter).populate("products"); 
 
   if (!categories || categories.length === 0) {
     return next(new Error("No categories found", { cause: 404 }));
