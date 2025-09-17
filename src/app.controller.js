@@ -54,7 +54,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
     res.status(404).json({message:"Page not found"})
   })
 
-startImageChecker();
+// startImageChecker();
 
  app.listen(port,()=>{
         console.log(`Example app listening on port ${port}`)

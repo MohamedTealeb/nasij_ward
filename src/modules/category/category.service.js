@@ -21,7 +21,7 @@ export const allCategories = asyncHandler(async (req, res, next) => {
     filter.products = product;
   }
 
-  const categories = await CategoryModel.find(filter).populate("products"); 
+  const categories = await CategoryModel.find(filter).populate("Product"); 
 
   if (!categories || categories.length === 0) {
     return next(new Error("No categories found", { cause: 404 }));
@@ -47,20 +47,7 @@ export const addCategory = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const singleCategory = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
 
-  const category = await CategoryModel.findById(id);
-  if (!category) {
-    return next(new Error("Category not found", { cause: 404 }));
-  }
-
-  return successResponse({
-    res,
-    message: "Category fetched successfully",
-    data: { category },
-  });
-});
 
 export const updateCategory = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
@@ -73,6 +60,7 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
   const updateData = { ...req.body };
 
   if (req.file) {
+    // 🟢 امسح الصورة القديمة لو موجودة
     if (oldCategory.image) {
       const oldImagePath = path.join(process.cwd(), oldCategory.image);
       fs.unlink(oldImagePath, (err) => {
@@ -82,7 +70,13 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
       });
     }
 
-    updateData.image = `/uploads/categories/${req.file.filename}`;
+    // 🟢 خزّن المسار الجديد في الـ DB (forward slashes)
+    updateData.image = path.posix.join(
+      "uploads",
+      "categories",
+      oldCategory.name,
+      req.file.filename
+    );
   }
 
   const category = await CategoryModel.findByIdAndUpdate(id, updateData, {
@@ -96,8 +90,6 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
     data: { category },
   });
 });
-
-
 export const removeCategory = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
