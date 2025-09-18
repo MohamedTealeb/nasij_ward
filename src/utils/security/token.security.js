@@ -80,7 +80,6 @@ export const decodedToken = async ({
     throw new Error("Invalid token");
   }
 
-  // ✅ get user directly
   const user = await UserModel.findById(decoded._id);
   if (!user) {
     throw new Error("not register acc", { cause: 404 });

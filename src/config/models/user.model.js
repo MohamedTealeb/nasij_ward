@@ -8,11 +8,10 @@ const userSchema=new mongoose.Schema({
     password:{type:String,required:function(){
         return this.provider==="local"?true:false
     }},
-    gender:{type:String,enum:["male","female"],default:"male"},
     phone:{type:String,required:function(){
         return this.provider==="local"?true:false
     }},
-    confirmEmail:{Date},
+    // confirmEmail:{Date},
     role:{type:String,enum:["user","admin"],default:"user"},
     //    confirmEmailOtp:{type:String},
            wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
