@@ -8,7 +8,6 @@ export const asyncHandler = (fn) => {
     }
   };
 };
-
 export const globalErrorHandling = (error, req, res, next) => {
   const statusCode = error.cause || 500;
 

@@ -4,27 +4,24 @@ import { asyncHandler } from "../utils/response.js";
 export const generalFields={
     firstName:Joi.string().required().min(3),
    lastName:Joi.string().required(),
-    
  email: Joi.string().email({
     minDomainSegments: 2,
     tlds: { allow: ["com", "net", "org", "io", "sa"] },
   }).required(),password: Joi.string()
   .pattern(new RegExp(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/))
   .required(),
-
             confirmPassword:Joi.string().required().valid(Joi.ref("password")),
-            phone:Joi.string().pattern(new RegExp(/^(002|\+2)?01[0125][0-9]{8}$/)).required(),
-            otp:Joi.string().pattern(new RegExp(/^\d{6}$/)).required(),
+            phone: Joi.string()
+            .pattern(/^(?:\+9665|009665|05)[0-9]{8}$/)
+            .required(),
+                    otp:Joi.string().pattern(new RegExp(/^\d{6}$/)).required(),
             userId: Joi.string().custom((value, helpers) => {
                 if (!Types.ObjectId.isValid(value)) {
                     return helpers.message("invalid mongoose id");
                 }
                 return value; 
             })
-            
-
 }
-
 export const validation=(Schema)=>{
     return asyncHandler(
         async(req,res,next)=>{
@@ -32,13 +29,10 @@ export const validation=(Schema)=>{
             if (!Schema) {
                 return res.status(400).json({message: "Validation schema is required"})
             }
-            
             const validationError=[]
-            
             // Iterate through schema properties (body, params, query, etc.)
             for(const key of Object.keys(Schema)){
                 let dataToValidate = {}
-                
                 // Map schema keys to request properties
                 switch(key) {
                     case 'body':
@@ -53,7 +47,6 @@ export const validation=(Schema)=>{
                     default:
                         dataToValidate = req[key]
                 }
-                
                 const validationResult=Schema[key].validate(dataToValidate)
                 if(validationResult.error){
                     validationError.push({key,details:validationResult.error.details.map(ele=>{
