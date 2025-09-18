@@ -27,7 +27,11 @@ export const addToCart = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const { productId, quantity } = req.body;
 
-  const qty = Number(quantity) > 0 ? Number(quantity) : 1;
+  const qty = Number(quantity);
+
+  if (!qty || qty < 1) {
+    return next(new Error("Quantity must be at least 1", { cause: 400 }));
+  }
 
   const product = await ProductModel.findById(productId);
   if (!product) return next(new Error("Product not found", { cause: 404 }));
