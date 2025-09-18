@@ -1,16 +1,11 @@
 import Joi from "joi";
 import { generalFields } from "../../middleware/validation.middleware.js";
-
-
 export const login={
     body:Joi.object().keys({
         email:generalFields.email.required(),
         password:generalFields.password.required(),  
     }).required()
 }
-
-
-
 export const signup={
     body:Joi.object().keys({
         email:generalFields.email.required(),
