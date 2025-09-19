@@ -13,7 +13,7 @@ export const globalErrorHandling = (error, req, res, next) => {
 
   return res.status(statusCode).json({
     message: error.message || "Internal Server Error",
-    ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
+    ...( { stack: error.stack }),
   });
 };
 
