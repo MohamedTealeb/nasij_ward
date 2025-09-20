@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
-
 const categorySchema=new mongoose.Schema({
-
-
  name: {
       type: String,
       required: true,
@@ -17,15 +14,9 @@ const categorySchema=new mongoose.Schema({
       type: String, 
       default: "",
     },
-
-
-
-
 },{
 
  timestamps: true
-
-
 })
 categorySchema.virtual("Product", {
   ref: "Product",          

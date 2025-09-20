@@ -17,7 +17,6 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
   },
 });
-
 const cartSchema = new mongoose.Schema(
   {
     user: {
@@ -39,25 +38,20 @@ const cartSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 cartSchema.methods.addItem = function (productId, price, quantity = 1) {
   const existingItem = this.items.find(
     (item) => item.product.toString() === productId.toString()
   );
-
   if (existingItem) {
     existingItem.quantity += quantity;
   } else {
     this.items.push({ product: productId, price, quantity });
   }
-
   this.totalPrice = this.items.reduce(
     (acc, item) => acc + item.quantity * item.price,
     0
   );
-
   return this.save();
 };
-
 export const CartModel =
   mongoose.models.Cart || mongoose.model("Cart", cartSchema);

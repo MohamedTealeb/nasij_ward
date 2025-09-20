@@ -2,18 +2,15 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// إعداد التخزين
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     try {
       let uploadPath;
 
       if (req.baseUrl.includes('/category')) {
-        // رفع صورة الكاتيجوري - استخدم مجلد عام للكاتيجوريز
         uploadPath = path.join("uploads", "categories");
       }
       else if (req.baseUrl.includes('/product')) {
-        // رفع منتجات - استخدم مجلد عام للمنتجات
         uploadPath = path.join("uploads", "products");
       }
       else {
@@ -30,7 +27,6 @@ const storage = multer.diskStorage({
   },
 
   filename: (req, file, cb) => {
-    // ممكن تخصص التسمية حسب نوع الرفع
     let prefix = "file";
     if (req.baseUrl.includes('/category')) prefix = "category";
     else if (req.baseUrl.includes('/product')) prefix = "product";

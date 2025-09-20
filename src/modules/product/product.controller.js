@@ -14,7 +14,6 @@ router.post(
 );
 router.get("/all", productService.allProducts);
 
-
 router.put(
   "/:id",
   authMiddleware,

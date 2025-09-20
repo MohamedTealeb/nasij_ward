@@ -19,6 +19,7 @@ import orderController from './modules/order/order.controller.js'
 
 import connectDB from './config/connection.db.js';
 import { startImageChecker } from './utils/cron/cleanup.cron.js';
+import { globalErrorHandling } from './utils/response.js';
 
 
 export const Bootstrap=async()=>{
@@ -55,6 +56,8 @@ const port=process.env.PORT
    app.use("/cart",CartController)
    app.use("/order",orderController)
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+  app.use(globalErrorHandling);
 
   app.use((req,res)=>{
     res.status(404).json({message:"Page not found"})

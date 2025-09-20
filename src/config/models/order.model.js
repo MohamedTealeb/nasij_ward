@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
@@ -16,7 +15,6 @@ const orderItemSchema = new mongoose.Schema({
     required: true, 
   },
 });
-
 const orderSchema = new mongoose.Schema(
   {
     user: {
@@ -58,5 +56,4 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 export const OrderModel =mongoose.models.Order || mongoose.model("Order", orderSchema);

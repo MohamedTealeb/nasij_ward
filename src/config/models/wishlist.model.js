@@ -15,14 +15,7 @@ const wishlistSchema=new mongoose.Schema({
       type: Date,
       default: Date.now,
     },
-
-
-
 },{
-
-
-
     timestamps:true
 })
-
 export const WishlistModel=mongoose.model("wishlist",wishlistSchema)
