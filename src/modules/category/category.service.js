@@ -24,9 +24,6 @@ export const allCategories = asyncHandler(async (req, res, next) => {
     .populate("products")
     .skip(skip)
     .limit(pageSize);
-  if (!categories || categories.length === 0) {
-    return next(new Error("No categories found", { cause: 404 }));
-  }
   return successResponse({
     res,
     message: "Categories fetched successfully",
