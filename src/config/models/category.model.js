@@ -16,7 +16,7 @@ const categorySchema=new mongoose.Schema({
     },
 },{
 
- timestamps: true
+ timestamps: true,
 })
 categorySchema.virtual("Product", {
   ref: "Product",          

@@ -21,7 +21,7 @@ export const allCategories = asyncHandler(async (req, res, next) => {
   const skip = (pageNumber - 1) * pageSize;
   const totalCategories = await CategoryModel.countDocuments(filter);
   const categories = await CategoryModel.find(filter)
-    .populate("products")
+    .populate("Product")
     .skip(skip)
     .limit(pageSize);
   return successResponse({
