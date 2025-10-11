@@ -24,7 +24,7 @@ const userSchema=new mongoose.Schema({
 
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
-
+      resetPasswordOtp:{type:String},
 },{
 
 

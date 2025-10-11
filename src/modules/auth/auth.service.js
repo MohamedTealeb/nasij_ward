@@ -41,3 +41,17 @@ export const login = asyncHandler(async (req, res, next) => {
     data: { user: cleanUser, credentials },
   });
 });
+export const sendResetPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    return next(new Error("user not found", { cause: 404 }));
+  }
+  const otp = generateNumberOtp();
+  // Send OTP to user's email
+  return successResponse({
+    res,
+    message: "OTP sent successfully",
+    data: { otp },
+  });
+});

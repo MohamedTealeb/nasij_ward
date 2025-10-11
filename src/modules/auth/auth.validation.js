@@ -17,3 +17,8 @@ export const signup={
     }).required(),
 
 }
+export const sendResetPassword={
+    body:Joi.object().keys({
+        email:generalFields.email.required(),
+    }).required()
+}
