@@ -16,7 +16,8 @@ import prodductController from './modules/product/product.controller.js'
 import wishlistController from './modules/wishlist/wishlist.controler.js'
 import CartController from './modules/cart/cart.controller.js'
 import orderController from './modules/order/order.controller.js'
-
+import paymentController from './modules/payment/payment.controller.js'
+import blogController from './modules/blog/blog.controller.js'
 import connectDB from './config/connection.db.js';
 import { startImageChecker } from './utils/cron/cleanup.cron.js';
 import { globalErrorHandling } from './utils/response.js';
@@ -55,6 +56,8 @@ const port=process.env.PORT
    app.use("/wishlist",wishlistController)
    app.use("/cart",CartController)
    app.use("/order",orderController)
+   app.use("/payment",paymentController)
+   app.use("/blog",blogController)
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use(globalErrorHandling);

@@ -43,3 +43,11 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
     data: { orders },
   });
 });
+export const getAllOrders = asyncHandler(async (req, res, next) => {
+  const orders = await OrderModel.find();
+  return successResponse({
+    res,
+    message: "All orders fetched successfully",
+    data: { orders },
+  });
+});
