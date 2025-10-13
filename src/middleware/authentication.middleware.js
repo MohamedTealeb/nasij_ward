@@ -23,3 +23,26 @@ export const checkRole = (role) => {
     next();
   };
 };
+
+export const optionalAuthMiddleware = async (req, res, next) => {
+  try {
+    const authorization = req.headers.authorization;
+    
+    if (!authorization) {
+      req.user = null;
+      return next();
+    }
+    
+    const { user } = await decodedToken({ authorization });
+    if (!user) {
+      req.user = null;
+      return next();
+    }
+    
+    req.user = user;
+    next();
+  } catch (err) {
+    req.user = null;
+    next();
+  }
+};

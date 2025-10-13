@@ -11,7 +11,7 @@ const userSchema=new mongoose.Schema({
     phone:{type:String,select:false,required:function(){
         return this.provider==="local"?true:false
     }},
-    role:{type:String,enum:["user","admin"],default:"user"},
+    role:{type:String,enum:["user","admin","guest"],default:"user"},
            wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
  cart: [
       {

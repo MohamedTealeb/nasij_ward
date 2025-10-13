@@ -2,24 +2,31 @@ import { CartModel } from "../../config/models/cart.model.js";
 import { ProductModel } from "../../config/models/product.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 export const getCart = asyncHandler(async (req, res, next) => {
-  const userId = req.user._id;
-  const cart = await CartModel.findOne({ user: userId, status: "active" })
-    .populate("items.product");
-  if (!cart) {
+  if (req.user) {
+    const userId = req.user._id;
+    const cart = await CartModel.findOne({ user: userId, status: "active" })
+      .populate("items.product");
+    if (!cart) {
+      return successResponse({
+        res,
+        message: "Cart fetched successfully",
+        data: { cart: [], totalPrice: 0 },
+      });
+    }
     return successResponse({
       res,
       message: "Cart fetched successfully",
-      data: { cart: [], totalPrice: 0 },
+      data: { cart: cart.items, totalPrice: cart.totalPrice },
+    });
+  } else {
+    return successResponse({
+      res,
+      message: "Guest cart fetched successfully",
+      data: { cart: [], totalPrice: 0, message: "Please login to save your cart" },
     });
   }
-  return successResponse({
-    res,
-    message: "Cart fetched successfully",
-    data: { cart: cart.items, totalPrice: cart.totalPrice },
-  });
 });
 export const addToCart = asyncHandler(async (req, res, next) => {
-  const userId = req.user._id;
   const { productId, quantity } = req.body;
   const qty = Number(quantity);
 
@@ -33,65 +40,90 @@ export const addToCart = asyncHandler(async (req, res, next) => {
   const product = await ProductModel.findById(productId);
   if (!product) return next(new Error("Product not found", { cause: 404 }));
 
-  let cart = await CartModel.findOne({ user: userId, status: "active" });
-  if (!cart) {
-    cart = await CartModel.create({ user: userId, items: [] });
-  }
-
-  const item = cart.items.find(
-    (item) => item.product.toString() === productId
-  );
-
-  if (qty > 0) {
-    // ✅ إضافة أو زيادة
-    if (item) {
-      item.quantity += qty;
-    } else {
-      cart.items.push({ product: productId, price: product.price, quantity: qty });
+  if (req.user) {
+    const userId = req.user._id;
+    let cart = await CartModel.findOne({ user: userId, status: "active" });
+    if (!cart) {
+      cart = await CartModel.create({ user: userId, items: [] });
     }
-  } else if (qty === -1) {
-    // ✅ إنقاص
-    if (!item) return next(new Error("Product not in cart", { cause: 404 }));
-    if (item.quantity > 1) {
-      item.quantity -= 1;
-    } else {
-      cart.items = cart.items.filter(
-        (item) => item.product.toString() !== productId
-      );
+
+    const item = cart.items.find(
+      (item) => item.product.toString() === productId
+    );
+
+    if (qty > 0) {
+            if (item) {
+        item.quantity += qty;
+      } else {
+        cart.items.push({ product: productId, price: product.price, quantity: qty });
+      }
+    } else if (qty === -1) {
+      if (!item) return next(new Error("Product not in cart", { cause: 404 }));
+      if (item.quantity > 1) {
+        item.quantity -= 1;
+      } else {
+        cart.items = cart.items.filter(
+          (item) => item.product.toString() !== productId
+        );
+      }
     }
+
+    // تحديث السعر الكلي
+    cart.totalPrice = cart.items.reduce(
+      (acc, item) => acc + item.quantity * item.price,
+      0
+    );
+
+    await cart.save();
+
+    return successResponse({
+      res,
+      message: "Cart updated successfully",
+      data: { cart },
+    });
+  } else {
+    // للـ guest - نرجع رسالة تشجيعية للتسجيل
+    return successResponse({
+      res,
+      message: "Product added to guest cart. Please login to save your cart permanently.",
+      data: { 
+        product: {
+          _id: product._id,
+          name: product.name,
+          price: product.price,
+          quantity: qty
+        },
+        message: "Login to save your cart permanently"
+      },
+    });
   }
-
-  // تحديث السعر الكلي
-  cart.totalPrice = cart.items.reduce(
-    (acc, item) => acc + item.quantity * item.price,
-    0
-  );
-
-  await cart.save();
-
-  return successResponse({
-    res,
-    message: "Cart updated successfully",
-    data: { cart },
-  });
 });
 
 export const removeFromCart = asyncHandler(async (req, res, next) => {
-  const userId = req.user._id;
   const { productId } = req.params;
-  const cart = await CartModel.findOne({ user: userId, status: "active" });
-  if (!cart) return next(new Error("Cart not found", { cause: 404 }));
-  cart.items = cart.items.filter(
-    (item) => item.product.toString() !== productId
-  );
-  cart.totalPrice = cart.items.reduce(
-    (acc, item) => acc + item.quantity * item.price,
-    0
-  );
-  await cart.save();
-  return successResponse({
-    res,
-    message: "Product removed from cart successfully",
-    data: { cart },
-  });
+  
+  if (req.user) {
+    const userId = req.user._id;
+    const cart = await CartModel.findOne({ user: userId, status: "active" });
+    if (!cart) return next(new Error("Cart not found", { cause: 404 }));
+    cart.items = cart.items.filter(
+      (item) => item.product.toString() !== productId
+    );
+    cart.totalPrice = cart.items.reduce(
+      (acc, item) => acc + item.quantity * item.price,
+      0
+    );
+    await cart.save();
+    return successResponse({
+      res,
+      message: "Product removed from cart successfully",
+      data: { cart },
+    });
+  } else {
+    return successResponse({
+      res,
+      message: "Please login to manage your cart permanently",
+      data: { message: "Login to save and manage your cart" },
+    });
+  }
 });
