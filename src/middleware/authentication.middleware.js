@@ -1,4 +1,5 @@
 import { decodedToken } from "../utils/security/token.security.js";
+import mongoose from "mongoose";
 export const authMiddleware = async (req, res, next) => {
   try {
     const authorization = req.headers.authorization;
@@ -44,5 +45,32 @@ export const optionalAuthMiddleware = async (req, res, next) => {
   } catch (err) {
     req.user = null;
     next();
+  }
+};
+
+// Middleware للتحقق من أن المستخدم يمكنه الوصول للـ shipment
+export const checkShipmentAccess = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+    
+    // للـ admin يمكنه الوصول لجميع الـ shipments
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    
+    // البحث عن الـ shipment والتأكد من أن المستخدم هو صاحبها
+    const shipment = await mongoose.model('Shipment').findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: "Shipment not found" });
+    }
+    
+    if (shipment.user.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Access denied. You can only access your own shipments" });
+    }
+    
+    next();
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };

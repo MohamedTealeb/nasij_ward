@@ -5,4 +5,5 @@ const router=Router()
 router.get("/",optionalAuthMiddleware,CartService.getCart)
 router.post("/add",optionalAuthMiddleware,CartService.addToCart)
 router.delete("/:productId",optionalAuthMiddleware,CartService.removeFromCart)
+router.put("/:productId",optionalAuthMiddleware,CartService.updateCartItemQuantity)
 export default router

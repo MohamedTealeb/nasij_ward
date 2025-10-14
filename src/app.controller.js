@@ -19,10 +19,8 @@ import orderController from './modules/order/order.controller.js'
 import paymentController from './modules/payment/payment.controller.js'
 import blogController from './modules/blog/blog.controller.js'
 import connectDB from './config/connection.db.js';
-import { startImageChecker } from './utils/cron/cleanup.cron.js';
 import { globalErrorHandling } from './utils/response.js';
-
-
+import shipmentController from './modules/shipment/shipment.controller.js';
 export const Bootstrap=async()=>{
 const app=express();
 const port=process.env.PORT
@@ -58,6 +56,7 @@ const port=process.env.PORT
    app.use("/order",orderController)
    app.use("/payment",paymentController)
    app.use("/blog",blogController)
+   app.use("/shipment",shipmentController)
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use(globalErrorHandling);

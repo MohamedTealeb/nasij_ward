@@ -127,3 +127,49 @@ export const removeFromCart = asyncHandler(async (req, res, next) => {
     });
   }
 });
+export const updateCartItemQuantity = asyncHandler(async (req, res, next) => {
+  const { productId } = req.params;
+  const { quantity } = req.body;
+  const qty = Number(quantity);
+  
+  if (isNaN(qty)) {
+    return next(new Error("Quantity must be a number", { cause: 400 }));
+  }
+  if (qty === 0) {
+    return next(new Error("Quantity cannot be 0", { cause: 400 }));
+  }
+  
+  const cart = await CartModel.findOne({ user: req.user._id, status: "active" });
+  if (!cart) return next(new Error("Cart not found", { cause: 404 }));
+  
+  const item = cart.items.find(
+    (item) => item.product.toString() === productId
+  );
+  if (!item) return next(new Error("Product not in cart", { cause: 404 }));
+  
+  item.quantity = qty;
+  
+
+  if (item.quantity < 1) {
+    item.quantity = 1;
+  }
+  
+  cart.totalPrice = cart.items.reduce(  
+    (acc, item) => acc + item.quantity * item.price,
+    0
+  );
+  
+  await cart.save();
+  
+  return successResponse({
+    res,
+    message: `Cart item quantity updated successfully. Set to ${qty}.`,
+    data: { 
+      cart,
+      updatedItem: {
+        productId: item.product,
+        newQuantity: item.quantity
+      }
+    },
+  });
+});
