@@ -3,16 +3,7 @@ import Joi from "joi";
 // Validation for creating a new blog post
 export const createBlogValidation = {
   body: Joi.object({
-    author: Joi.string()
-      .min(2)
-      .max(50)
-      .trim()
-      .required()
-      .messages({
-        "string.min": "Author name must be at least 2 characters",
-        "string.max": "Author name cannot exceed 50 characters",
-        "any.required": "Author name is required"
-      }),
+    image: Joi.string().optional(),
     description: Joi.string()
       .min(10)
       .max(1000)
@@ -28,24 +19,17 @@ export const createBlogValidation = {
 // Validation for updating a blog post
 export const updateBlogValidation = {
   body: Joi.object({
-    author: Joi.string()
-      .min(2)
-      .max(50)
-      .trim()
-      .optional()
-      .messages({
-        "string.min": "Author name must be at least 2 characters",
-        "string.max": "Author name cannot exceed 50 characters"
-      }),
+    image: Joi.string().optional(),
     description: Joi.string()
-      .min(10)
+      .min(5)
       .max(1000)
       .optional()
+      .allow("")
       .messages({
         "string.min": "Blog description must be at least 10 characters",
         "string.max": "Blog description cannot exceed 1000 characters"
       })
-  })
+  }).optional()
 };
 
 // Validation for blog ID parameter
@@ -68,6 +52,9 @@ export const blogQueryValidation = {
     limit: Joi.number().integer().min(1).max(100).default(10),
     author: Joi.string().trim().optional(),
     search: Joi.string().trim().optional(),
+    id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional().messages({
+      "string.pattern.base": "Invalid blog ID format"
+    }),
     sortBy: Joi.string().valid("createdAt", "updatedAt").default("createdAt"),
     sortOrder: Joi.string().valid("asc", "desc").default("desc")
   })

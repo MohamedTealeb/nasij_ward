@@ -13,6 +13,9 @@ const storage = multer.diskStorage({
       else if (req.baseUrl.includes('/product')) {
         uploadPath = path.join("uploads", "products");
       }
+      else if (req.baseUrl.includes('/blog')) {
+        uploadPath = path.join("uploads", "blogs");
+      }
       else {
         uploadPath = path.join("uploads", "general");
       }
@@ -30,6 +33,7 @@ const storage = multer.diskStorage({
     let prefix = "file";
     if (req.baseUrl.includes('/category')) prefix = "category";
     else if (req.baseUrl.includes('/product')) prefix = "product";
+    else if (req.baseUrl.includes('/blog')) prefix = "blog";
 
     const uniqueName = `${prefix}_${Date.now()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);

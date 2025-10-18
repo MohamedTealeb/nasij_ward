@@ -3,10 +3,14 @@ import { asyncHandler, successResponse } from "../../utils/response.js";
 
 
 export const createBlog = asyncHandler(async (req, res, next) => {
-  const { author, description } = req.body;
+  const body = req.body || {};
+  const { description } = body;
 
+  // ✅ معالجة آمنة لـ req.file
+  const image = req.file ? `/uploads/blogs/${req.file.filename}` : "";
+  
   const blogData = {
-    author,
+    image,
     description
   };
 
@@ -25,17 +29,18 @@ export const getAllBlogs = asyncHandler(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    author,
+    image,
     search,
+    id,
     sortBy = "createdAt",
     sortOrder = "desc"
   } = req.query;
 
   let filter = { isDeleted: { $ne: true } };
 
-  // Add author filter
-  if (author) {
-    filter.author = author;
+  // ✅ فلتر بالـ ID
+  if (id) {
+    filter._id = id;
   }
 
   // Add search filter
@@ -61,7 +66,7 @@ export const getAllBlogs = asyncHandler(async (req, res, next) => {
     res,
     message: "Blogs fetched successfully",
     data: {
-      blogs,
+      image,blogs,
       pagination: {
         total: totalBlogs,
         page: pageNumber,
@@ -73,29 +78,32 @@ export const getAllBlogs = asyncHandler(async (req, res, next) => {
 });
 
 
-export const getBlogById = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
 
-  const blog = await BlogModel.findOne({
-    _id: id,
-    isDeleted: { $ne: true }
-  });
-
-  if (!blog) {
-    return next(new Error("Blog not found", { cause: 404 }));
-  }
-
-  return successResponse({
-    res,
-    message: "Blog fetched successfully",
-    data: { blog }
-  });
-});
 
 
 export const updateBlog = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const updateData = req.body;
+  
+  // ✅ معالجة آمنة لـ req.body
+  const body = req.body || {};
+  const { description } = body;
+  
+  // ✅ معالجة آمنة لـ req.file
+  const image = req.file ? `/uploads/blogs/${req.file.filename}` : "";
+  
+  // ✅ إنشاء updateData مع التحقق من وجود البيانات
+  const updateData = {};
+  if (description !== undefined) {
+    updateData.description = description;
+  }
+  if (image) {
+    updateData.image = image;
+  }
+  
+  // ✅ التحقق من وجود بيانات للتحديث
+  if (Object.keys(updateData).length === 0) {
+    return next(new Error("No data provided for update", { cause: 400 }));
+  }
 
   const blog = await BlogModel.findOne({
     _id: id,
@@ -145,42 +153,24 @@ export const deleteBlog = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Get user's own blogs
-export const getMyBlogs = asyncHandler(async (req, res, next) => {
-  const { author } = req.query;
-  const { page = 1, limit = 10 } = req.query;
+export const getBlogById = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
 
-  let filter = {
+  const blog = await BlogModel.findOne({
+    _id: id,
     isDeleted: { $ne: true }
-  };
+  });
 
-  // Add author filter if provided
-  if (author) {
-    filter.author = author;
+  if (!blog) {
+    return next(new Error("Blog not found", { cause: 404 }));
   }
-
-  const pageNumber = parseInt(page);
-  const pageSize = parseInt(limit);
-  const skip = (pageNumber - 1) * pageSize;
-
-  const totalBlogs = await BlogModel.countDocuments(filter);
-  const blogs = await BlogModel.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(pageSize);
 
   return successResponse({
     res,
-    message: "Blogs fetched successfully",
-    data: {
-      blogs,
-      pagination: {
-        total: totalBlogs,
-        page: pageNumber,
-        pages: Math.ceil(totalBlogs / pageSize),
-        limit: pageSize
-      }
-    }
+    message: "Blog fetched successfully",
+    data: { blog },
   });
 });
+
+// Get user's own blogs
 

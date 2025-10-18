@@ -9,17 +9,19 @@ import {
   blogIdValidation,
   blogQueryValidation
 } from "./blog.validation.js";
+import { upload } from "../../utils/multer/cloud.multer.js";
 
 const router = Router();
 
 // Public routes (no authentication required)
-router.get("/", validation(blogQueryValidation), blogService.getAllBlogs);
+router.get("/", validation(blogQueryValidation),  blogService.getAllBlogs);
 router.get("/:id", validation(blogIdValidation), blogService.getBlogById);
 
 // Protected routes (authentication required)
 router.post(
   "/",
   authMiddleware,
+  upload.single("image"),
   validation(createBlogValidation),
   blogService.createBlog
 );
@@ -27,6 +29,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
+  upload.single("image"),
   validation({ ...blogIdValidation, ...updateBlogValidation }),
   blogService.updateBlog
 );

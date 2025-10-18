@@ -1,18 +1,15 @@
 import mongoose from "mongoose";
 
 const blogSchema = new mongoose.Schema({
-  author: {
+ image: {
     type: String,
-    required: [true, "Author name is required"],
-    trim: true,
-    minlength: [2, "Author name must be at least 2 characters"],
-    maxlength: [50, "Author name cannot exceed 50 characters"]
+    required: [true, "Blog image is required"],
   },
   description: {
     type: String,
     required: [true, "Blog description is required"],
     minlength: [5, "Blog description must be at least 10 characters"],
-    maxlength: [6000, "Blog description cannot exceed 1000 characters"]
+    maxlength: [60000, "Blog description cannot exceed 1000 characters"]
   },
   isDeleted: {
     type: Boolean,

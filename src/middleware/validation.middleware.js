@@ -37,16 +37,16 @@ export const validation=(Schema)=>{
                 // Map schema keys to request properties
                 switch(key) {
                     case 'body':
-                        dataToValidate = req.body
+                        dataToValidate = req.body || {}
                         break
                     case 'params':
-                        dataToValidate = req.params
+                        dataToValidate = req.params || {}
                         break
                     case 'query':
-                        dataToValidate = req.query
+                        dataToValidate = req.query || {}
                         break
                     default:
-                        dataToValidate = req[key]
+                        dataToValidate = req[key] || {}
                 }
                 const validationResult=Schema[key].validate(dataToValidate)
                 if(validationResult.error){
