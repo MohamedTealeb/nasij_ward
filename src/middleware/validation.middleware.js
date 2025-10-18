@@ -7,7 +7,8 @@ export const generalFields={
  email: Joi.string().email({
     minDomainSegments: 2,
     tlds: { allow: ["com", "net", "org", "io", "sa"] },
-  }).required(),password: Joi.string()
+  }).required(),
+  password: Joi.string()
   .pattern(new RegExp(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/))
   .required(),
             confirmPassword:Joi.string().required().valid(Joi.ref("password")),

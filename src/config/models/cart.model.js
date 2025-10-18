@@ -6,6 +6,7 @@ const cartItemSchema = new mongoose.Schema({
     ref: "Product",
     required: true,
   },
+     
   quantity: {
     type: Number,
     required: true,
@@ -22,7 +23,11 @@ const cartSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+      index: true,
+    },
+        sessionId: {
+      type: String, // ✅ ده نستخدمه للـ guest cart
       index: true,
     },
     items: [cartItemSchema],
@@ -34,6 +39,10 @@ const cartSchema = new mongoose.Schema(
       type: String,
       enum: ["active", "ordered", "abandoned"],
       default: "active",
+    },
+      expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // ✅ بعد أسبوع cart guest تنتهي
     },
   },
   { timestamps: true }
@@ -51,6 +60,11 @@ cartSchema.methods.addItem = function (productId, price, quantity = 1) {
     (acc, item) => acc + item.quantity * item.price,
     0
   );
+  return this.save();
+};
+cartSchema.methods.clearCart = async function () {
+  this.items = [];
+  this.totalPrice = 0;
   return this.save();
 };
 export const CartModel =
