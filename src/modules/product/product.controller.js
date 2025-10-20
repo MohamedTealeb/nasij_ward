@@ -12,6 +12,7 @@ router.post(
   upload.fields([
     { name: "coverImage", maxCount: 1 },
     { name: "images", maxCount: 20 },
+    { name: "colorImages", maxCount: 20 },
   ]),
   productService.addProduct
 );
@@ -24,6 +25,7 @@ router.put(
   upload.fields([
     { name: "coverImage", maxCount: 1 },
     { name: "images", maxCount: 20 },
+    { name: "colorImages", maxCount: 20 },
   ]),
   productService.updateProduct
 );

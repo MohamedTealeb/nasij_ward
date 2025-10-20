@@ -49,7 +49,8 @@ export const allProducts = asyncHandler(async (req, res, next) => {
 });
 
 export const addProduct = asyncHandler(async (req, res, next) => {
-  const { name, description, price, category, colors, sizes ,stock } = req.body;
+  const { name, description, price, category, colors, sizes, stock } = req.body;
+
   const categoryExists = await CategoryModel.findById(category);
   if (!categoryExists) {
     return next(new Error("Category not found", { cause: 404 }));
@@ -58,63 +59,45 @@ export const addProduct = asyncHandler(async (req, res, next) => {
   let coverImage = "";
   let images = [];
 
-  if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+  // ✅ 1. رفع صور المنتج العامة
+  if (req.files?.coverImage?.[0]) {
     coverImage = `/uploads/products/${req.files.coverImage[0].filename}`;
   }
-
-  if (req.files && req.files.images && Array.isArray(req.files.images)) {
-    images = req.files.images.map((f) => `/uploads/products/${f.filename}`);
+  if (req.files?.images?.length) {
+    images = req.files.images.map(f => `/uploads/products/${f.filename}`);
   }
 
-  // Parse colors if provided
+  // ✅ 2. رفع صور الألوان
+  const colorImages = req.files?.colorImages?.map(f => `/uploads/products/${f.filename}`) || [];
+
+  // ✅ 3. Parse الألوان وربط كل لون بالصورة الخاصة بيه
   let parsedColors = [];
   if (colors) {
     try {
-      parsedColors = typeof colors === 'string' ? JSON.parse(colors) : colors;
-      // Validate colors structure
-      if (!Array.isArray(parsedColors)) {
-        return next(new Error("Colors must be an array", { cause: 400 }));
-      }
-      // Validate each color object
-      for (const color of parsedColors) {
-        if (!color.name || !color.hex) {
-          return next(new Error("Each color must have name and hex", { cause: 400 }));
-        }
-        // Validate hex format
-        if (!/^#([0-9A-F]{3}){1,2}$/i.test(color.hex)) {
-          return next(new Error("Invalid hex color format", { cause: 400 }));
-        }
-      }
+      const colorsArr = typeof colors === "string" ? JSON.parse(colors) : colors;
+      if (!Array.isArray(colorsArr)) throw new Error("Colors must be an array");
+
+      parsedColors = colorsArr.map((color, index) => ({
+        name: color.name,
+        hex: color.hex,
+        image: colorImages[index] || "", // هنا بيربط الصورة بنفس ترتيبها
+      }));
     } catch (error) {
       return next(new Error("Invalid colors format", { cause: 400 }));
     }
   }
 
-  // Parse sizes if provided
+  // ✅ 4. Parse الأحجام
   let parsedSizes = [];
   if (sizes) {
     try {
-      parsedSizes = typeof sizes === 'string' ? JSON.parse(sizes) : sizes;
-      // Validate sizes structure
-      if (!Array.isArray(parsedSizes)) {
-        return next(new Error("Sizes must be an array", { cause: 400 }));
-      }
-      // Validate each size is a string
-      for (const size of parsedSizes) {
-        if (typeof size !== 'string') {
-          return next(new Error("Each size must be a string", { cause: 400 }));
-        }
-      }
-    } catch (error) {
+      parsedSizes = typeof sizes === "string" ? JSON.parse(sizes) : sizes;
+    } catch {
       return next(new Error("Invalid sizes format", { cause: 400 }));
     }
   }
-  if (stock <= 0) {
-    if (typeof stock !== 'number') {
-      return next(new Error("Stock must be a number", { cause: 400 }));
-    }
-  }
 
+  // ✅ 5. إنشاء المنتج
   const product = await ProductModel.create({
     name,
     description,
@@ -124,100 +107,106 @@ export const addProduct = asyncHandler(async (req, res, next) => {
     category,
     colors: parsedColors,
     sizes: parsedSizes,
-    stock
+    stock,
   });
+
   return successResponse({
     res,
     message: "Product created successfully",
     data: { product },
   });
 });
+
 export const updateProduct = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const oldProduct = await ProductModel.findById(id).populate("category");
+  const oldProduct = await ProductModel.findById(id);
   if (!oldProduct) {
     return next(new Error("Product not found", { cause: 404 }));
   }
-  const updateData = { ...req.body };
 
-  // Handle coverImage replacement
-  if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+  const { name, description, price, category, colors, sizes, stock } = req.body;
+  const updateData = {};
+
+  // ✅ 1. التأكد من صلاحية الـ Category لو اتغيرت
+  if (category) {
+    const categoryExists = await CategoryModel.findById(category);
+    if (!categoryExists) {
+      return next(new Error("Category not found", { cause: 404 }));
+    }
+    updateData.category = category;
+  }
+
+  // ✅ 2. تحديث صور المنتج العامة
+  if (req.files?.coverImage?.[0]) {
+    // حذف الصورة القديمة لو فيه واحدة
     if (oldProduct.coverImage) {
-      const oldCoverPath = path.join(process.cwd(), oldProduct.coverImage);
-      fs.unlink(oldCoverPath, (err) => {
-        if (err) {
-          console.error("Error deleting old product cover image:", err.message);
-        }
+      const oldPath = path.join(process.cwd(), oldProduct.coverImage);
+      fs.unlink(oldPath, (err) => {
+        if (err) console.error("Error deleting old cover image:", err.message);
       });
     }
     updateData.coverImage = `/uploads/products/${req.files.coverImage[0].filename}`;
   }
 
-  // If new images uploaded, replace the images array
-  if (req.files && req.files.images && Array.isArray(req.files.images) && req.files.images.length > 0) {
+  if (req.files?.images?.length) {
     updateData.images = req.files.images.map((f) => `/uploads/products/${f.filename}`);
   }
 
-  // Handle colors update
-  if (updateData.colors) {
+  // ✅ 3. تجهيز صور الألوان الجديدة (حسب الترتيب)
+  const colorImages =
+    req.files?.colorImages?.map((f) => `/uploads/products/${f.filename}`) || [];
+
+  // ✅ 4. Parse وتحديث الألوان بالترتيب
+  if (colors) {
     try {
-      const parsedColors = typeof updateData.colors === 'string' ? JSON.parse(updateData.colors) : updateData.colors;
-      // Validate colors structure
-      if (!Array.isArray(parsedColors)) {
-        return next(new Error("Colors must be an array", { cause: 400 }));
-      }
-      // Validate each color object
-      for (const color of parsedColors) {
-        if (!color.name || !color.hex) {
-          return next(new Error("Each color must have name and hex", { cause: 400 }));
-        }
-        // Validate hex format
-        if (!/^#([0-9A-F]{3}){1,2}$/i.test(color.hex)) {
-          return next(new Error("Invalid hex color format", { cause: 400 }));
-        }
-      }
+      const colorsArr = typeof colors === "string" ? JSON.parse(colors) : colors;
+      if (!Array.isArray(colorsArr)) throw new Error("Colors must be an array");
+
+      const parsedColors = colorsArr.map((color, index) => {
+        const existingColor = oldProduct.colors?.[index];
+        return {
+          name: color.name,
+          hex: color.hex,
+          // استخدم الصورة الجديدة إن وجدت، وإلا الصورة المرسلة من العميل، وإلا الصورة القديمة، وإلا ""
+          image: colorImages[index] || color.image || existingColor?.image || "",
+        };
+      });
+
       updateData.colors = parsedColors;
     } catch (error) {
       return next(new Error("Invalid colors format", { cause: 400 }));
     }
   }
 
-  // Handle sizes update
-  if (updateData.sizes) {
+  // ✅ 5. Parse وتحديث الأحجام
+  if (sizes) {
     try {
-      const parsedSizes = typeof updateData.sizes === 'string' ? JSON.parse(updateData.sizes) : updateData.sizes;
-      // Validate sizes structure
-      if (!Array.isArray(parsedSizes)) {
-        return next(new Error("Sizes must be an array", { cause: 400 }));
-      }
-      // Validate each size is a string
-      for (const size of parsedSizes) {
-        if (typeof size !== 'string') {
-          return next(new Error("Each size must be a string", { cause: 400 }));
-        }
-      }
-      updateData.sizes = parsedSizes;
-    } catch (error) {
+      updateData.sizes = typeof sizes === "string" ? JSON.parse(sizes) : sizes;
+    } catch {
       return next(new Error("Invalid sizes format", { cause: 400 }));
     }
   }
 
-  if (updateData.category) {
-    const categoryExists = await CategoryModel.findById(updateData.category);
-    if (!categoryExists) {
-      return next(new Error("Category not found", { cause: 404 }));
-    }
-  }
-  const product = await ProductModel.findByIdAndUpdate(id, updateData, {
+  // ✅ 6. باقي الحقول الأساسية
+  if (name) updateData.name = name;
+  if (description) updateData.description = description;
+  if (price) updateData.price = price;
+  if (stock !== undefined) updateData.stock = stock;
+
+  // ✅ 7. تحديث المنتج في قاعدة البيانات
+  const updatedProduct = await ProductModel.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   }).populate("category");
+
   return successResponse({
     res,
     message: "Product updated successfully",
-    data: { product },
+    data: { product: updatedProduct },
   });
 });
+
+
 export const removeProduct = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
