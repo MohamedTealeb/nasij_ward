@@ -3,7 +3,6 @@ import { ProductModel } from "../../config/models/product.model.js";
 import { UserModel } from "../../config/models/user.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 
-// ✅ دالة مساعدة للحصول على Session ID بأمان
 const getSessionId = (req) => {
   try {
     return (req.cookies && req.cookies.sessionId) || req.headers["x-session-id"];
