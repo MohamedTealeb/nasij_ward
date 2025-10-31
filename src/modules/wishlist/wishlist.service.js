@@ -1,43 +1,65 @@
 import { ProductModel } from "../../config/models/product.model.js";
 import { UserModel } from "../../config/models/user.model.js"; // لازم يكون عندك موديل User
+import { WishlistModel } from "../../config/models/wishlist.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
-
 
 export const getWishlist = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
 
-  const user = await UserModel.findById(userId).populate("wishlist");
-  if (!user) {
-    return next(new Error("User not found", { cause: 404 }));
-  }
+  // ✅ هنا بنجيب كل العناصر من جدول الـ Wishlist مباشرة
+  const wishlist = await WishlistModel.find({ user: userId })
+    .populate({
+      path: "product",
+      select: "name description price image colors sizes stock createdAt updatedAt",
+    });
 
   return successResponse({
     res,
     message: "Wishlist fetched successfully",
-    data: { wishlist: user.wishlist },
+    data: { wishlist },
   });
 });
 
-
 export const addToWishlist = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
-  const { productId } = req.body;
+  const { productId, color, size } = req.body;
+
+  if (!color || !size) {
+    return next(new Error("Color and size are required", { cause: 400 }));
+  }
 
   const product = await ProductModel.findById(productId);
   if (!product) {
     return next(new Error("Product not found", { cause: 404 }));
   }
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    { $addToSet: { wishlist: productId } }, 
-    { new: true }
-  ).populate("wishlist");
+  // ✅ التأكد إن المنتج مش مضاف مسبقًا بنفس اللون والمقاس
+  const existing = await WishlistModel.findOne({
+    user: userId,
+    product: productId,
+    color,
+    size,
+  });
+
+  if (existing) {
+    return successResponse({
+      res,
+      message: "Product already in wishlist",
+      data: { wishlistItem: existing },
+    });
+  }
+
+  const newItem = await WishlistModel.create({
+    user: userId,
+    product: productId,
+    color,
+    size,
+  });
 
   return successResponse({
     res,
     message: "Product added to wishlist successfully",
-    data: { wishlist: user.wishlist },
+    data: { wishlistItem: newItem },
   });
 });
 
@@ -45,16 +67,21 @@ export const addToWishlist = asyncHandler(async (req, res, next) => {
 export const removeFromWishlist = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const { productId } = req.params;
+  const { color, size } = req.body;
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    { $pull: { wishlist: productId } },
-    { new: true }
-  ).populate("wishlist");
+  const deleted = await WishlistModel.findOneAndDelete({
+    user: userId,
+    product: productId,
+    color,
+    size,
+  });
+
+  if (!deleted) {
+    return next(new Error("Product not found in wishlist", { cause: 404 }));
+  }
 
   return successResponse({
     res,
     message: "Product removed from wishlist successfully",
-    data: { wishlist: user.wishlist },
   });
 });

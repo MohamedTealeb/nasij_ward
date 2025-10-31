@@ -1,112 +1,55 @@
-import axios from "axios";
+// payment.controller.js
+import axios from 'axios';
 
-export const createTestPayment = async (req, res) => {
+const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY || 'sk_test_your_secret_key_here';
+const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
+
+export const createPayment = async (req, res) => {
   try {
-    const { amount, description, source } = req.body;
+    const { token, amount, currency, description, callback_url } = req.body;
 
-    if (!amount || !description || !source) {
+    // تحقق من المدخلات
+    if (!token || !amount) {
       return res.status(400).json({
         success: false,
-        message: "Amount, description, and source are required.",
+        message: 'Token and amount are required',
       });
     }
 
-    const response = await axios.post(
-      "https://api.moyasar.com/v1/payments",
-      {
-        amount: amount * 100, // ميسر يستخدم هللات
-        currency: "SAR",
-        description,
-        source, // { type: "creditcard", name, number, month, year, cvc }
-        callback_url:
-          process.env.FRONTEND_URL + "/payment/success" ||
-          "http://localhost:3000/payment/success",
+    // تجهيز البيانات
+    const paymentData = {
+      amount, // بالهللة (مثلاً 1000 = 10 ريال)
+      currency: currency || 'SAR',
+      description: description || 'Payment',
+      callback_url:
+        callback_url || `${req.protocol}://${req.get('host')}/payment-callback`,
+      source: {
+        type: 'token',
+        token,
       },
-      {
-        auth: {
-          username: process.env.MOYSAR_SECRET_KEY, // المفتاح السري
-          password: "",
-        },
-      }
-    );
+    };
 
+    // إرسال الطلب لـ Moyasar API
+    const response = await axios.post(`${MOYASAR_API_URL}/payments`, paymentData, {
+      auth: {
+        username: MOYASAR_SECRET_KEY,
+        password: '',
+      },
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // إرسال النتيجة للعميل
     return res.status(201).json({
       success: true,
-      message: "Payment created successfully",
-      data: response.data,
+      payment: response.data,
     });
   } catch (error) {
-    console.error(
-      "Payment creation error:",
-      error.response?.data || error.message
-    );
-    return res.status(500).json({
+    console.error('Payment Error:', error.response?.data || error.message);
+    return res.status(error.response?.status || 500).json({
       success: false,
-      message: "Payment creation failed",
-      error: error.response?.data || error.message,
-    });
-  }
-};
-
-export const getPaymentDetails = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-
-    const response = await axios.get(
-      `https://api.moyasar.com/v1/payments/${paymentId}`,
-      {
-        auth: {
-          username: process.env.MOYSAR_SECRET_KEY,
-          password: "",
-        },
-      }
-    );
-
-    return res.status(200).json({
-      success: true,
-      data: response.data,
-    });
-  } catch (error) {
-    console.error("Get payment error:", error.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch payment",
-      error: error.response?.data || error.message,
-    });
-  }
-};
-
-export const verifyPayment = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-
-    const response = await axios.get(
-      `https://api.moyasar.com/v1/payments/${paymentId}`,
-      {
-        auth: {
-          username: process.env.MOYSAR_SECRET_KEY,
-          password: "",
-        },
-      }
-    );
-
-    const payment = response.data;
-    const status = payment.status;
-
-    return res.status(200).json({
-      success: true,
-      paymentId,
-      status,
-      message: `Payment status: ${status}`,
-    });
-  } catch (error) {
-    console.error(
-      "Payment verification error:",
-      error.response?.data || error.message
-    );
-    return res.status(500).json({
-      success: false,
-      message: "Failed to verify payment",
+      message: 'Failed to create payment',
       error: error.response?.data || error.message,
     });
   }

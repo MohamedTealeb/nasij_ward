@@ -5,34 +5,38 @@ import fs from "fs";
 import path from "path";
 
 export const allProducts = asyncHandler(async (req, res, next) => {
-  const { id, name, category, color, size, page = 1, limit = 10 } = req.query;
+  const { id, name, category, color, size, minPrice, maxPrice, page = 1, limit = 10 } = req.query;
+
   let filter = {};
-  if (id) {
-    filter._id = id;
+
+  if (id) filter._id = id;
+  if (name) filter.name = { $regex: name, $options: "i" };
+  if (category) filter.category = category;
+  if (color) filter["colors.name"] = { $regex: color, $options: "i" };
+  if (size) filter["sizes"] = { $in: [size] };
+
+  // ✅ فلترة السعر
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = Number(minPrice);
+    if (maxPrice) filter.price.$lte = Number(maxPrice);
   }
-  if (name) {
-    filter.name = { $regex: name, $options: "i" };
-  }
-  if (category) {
-    filter.category = category;
-  }
-  if (color) {
-    filter["colors.name"] = { $regex: color, $options: "i" };
-  }
-  if (size) {
-    filter["sizes"] = { $in: [size] };
-  }
+
   const pageNumber = parseInt(page) || 1;
   const pageSize = parseInt(limit) || 10;
   const skip = (pageNumber - 1) * pageSize;
+
   const totalProducts = await ProductModel.countDocuments(filter);
+
   const products = await ProductModel.find(filter)
     .populate("category")
     .skip(skip)
     .limit(pageSize);
+
   if (!products || products.length === 0) {
     return next(new Error("No products found", { cause: 200 }));
   }
+
   return successResponse({
     res,
     message: "Products fetched successfully",
@@ -47,6 +51,7 @@ export const allProducts = asyncHandler(async (req, res, next) => {
     },
   });
 });
+
 
 export const addProduct = asyncHandler(async (req, res, next) => {
   const { name, description, price, category, colors, sizes, stock } = req.body;

@@ -1,33 +1,59 @@
 import { CartModel } from "../../config/models/cart.model.js";
 import { OrderModel } from "../../config/models/order.model.js";
+import { ProductModel } from "../../config/models/product.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 export const createOrder = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
-  const { shippingAddress, paymentMethod } = req.body;
-let cart = await CartModel.findOne({ user: userId, status: "active" }).populate("items.product");
-if (!cart) {
-  cart = await CartModel.create({ user: userId, items: [] });
-}
-if (cart.items.length === 0) {
-  return next(new Error("Cart is empty", { cause: 400 }));
-}
+  const { shippingAddress, paymentMethod, notes, shippingCost } = req.body;
+  
+  let cart = await CartModel.findOne({ user: userId, status: "active" }).populate("items.product");
+  
+  if (!cart) {
+    cart = await CartModel.create({ user: userId, items: [] });
+  }
+  
+  if (cart.items.length === 0) {
+    return next(new Error("Cart is empty", { cause: 400 }));
+  }
+
+  for (const item of cart.items) {
+    if (item.product.stock < item.quantity) {
+      return next(new Error(`المنتج ${item.product.name} غير متوفر بالكمية المطلوبة. المتوفر: ${item.product.stock}`, { cause: 400 }));
+    }
+  }
+  
   const orderItems = cart.items.map((item) => ({
     product: item.product._id,
     quantity: item.quantity,
     price: item.price,
+    color: Array.isArray(item.color) ? item.color : [item.color],
+    size: Array.isArray(item.size) ? item.size : [item.size],
   }));
-  const totalPrice = orderItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
+  
+  const subtotal = orderItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
+  const totalPrice = subtotal + (shippingCost || 0);
+  
   const order = await OrderModel.create({
     user: userId,
     items: orderItems,
     totalPrice,
     shippingAddress,
     paymentMethod: paymentMethod || "cash",
+    notes: notes || "",
+    shippingCost: shippingCost || 0,
   });
-  cart.status = "ordered";
-  cart.items = [];
-  cart.totalPrice = 0;
-  await cart.save();
+
+  // تقليل الـ stock من كل منتج في الأوردر
+  for (const item of cart.items) {
+    await ProductModel.findByIdAndUpdate(
+      item.product._id,
+      { $inc: { stock: -item.quantity } },
+      { new: true }
+    );
+  }
+  await CartModel.findByIdAndDelete(cart._id);
+
+ 
   return successResponse({
     res,
     message: "Order created successfully",
@@ -36,7 +62,9 @@ if (cart.items.length === 0) {
 });
 export const getUserOrders = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
-  const orders = await OrderModel.find({ user: userId }).populate("items.product");
+  const orders = await OrderModel.find({ user: userId })
+    .populate("items.product")
+    .populate("user", "firstName lastName email phone");
   return successResponse({
     res,
     message: "Orders fetched successfully",
@@ -44,10 +72,34 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
   });
 });
 export const getAllOrders = asyncHandler(async (req, res, next) => {
-  const orders = await OrderModel.find();
+  const orders = await OrderModel.find()
+    .populate("items.product")
+    .populate("user", "firstName lastName email phone");
   return successResponse({
     res,
     message: "All orders fetched successfully",
     data: { orders },
+  });
+});
+
+export const getOrderById = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
+  const userId = req.user._id;
+  
+  const order = await OrderModel.findOne({ 
+    _id: orderId, 
+    user: userId 
+  })
+    .populate("items.product")
+    .populate("user", "firstName lastName email phone");
+    
+  if (!order) {
+    return next(new Error("Order not found", { cause: 404 }));
+  }
+  
+  return successResponse({
+    res,
+    message: "Order fetched successfully",
+    data: { order },
   });
 });

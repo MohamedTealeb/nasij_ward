@@ -97,7 +97,7 @@ export const getCategoryById = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const category = await CategoryModel.findById(id).populate({
     path: "products",
-    select: "name description price image createdAt updatedAt"
+    select: "name description price image createdAt updatedAt colors sizes stock"
   });
   
   if (!category) {
