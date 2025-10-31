@@ -9,8 +9,13 @@ export const generalFields={
     tlds: { allow: ["com", "net", "org", "io", "sa"] },
   }).required(),
   password: Joi.string()
-  .pattern(new RegExp(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/))
-  .required(),
+  .min(8)
+  .pattern(new RegExp(/^(?=.*[A-Z])(?=.*\d)/))
+  .required()
+  .messages({
+    'string.pattern.base': 'Password must contain at least one uppercase letter and one number',
+    'string.min': 'Password must be at least 8 characters long'
+  }),
             confirmPassword:Joi.string().required().valid(Joi.ref("password")),
             phone: Joi.string()
             .pattern(/^(?:\+9665|009665|05)[0-9]{8}$/)

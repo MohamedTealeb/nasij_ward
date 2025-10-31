@@ -11,13 +11,12 @@ export const signup = asyncHandler(async (req, res, next) => {
     return res.status(400).json({ message: "User already exists" });
   }
   const hashedPassword = generateHash({ plaintext: password })
-  const encphone = await generateEncryption({ plaintext: phone })
   const NewUser = await UserModel.create({
     firstName,
     lastName,
     email,
     password: hashedPassword,
-    phone: encphone
+    phone: phone
   })
   return successResponse({
     res,

@@ -43,7 +43,6 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     shippingCost: shippingCost || 0,
   });
 
-  // تقليل الـ stock من كل منتج في الأوردر
   for (const item of cart.items) {
     await ProductModel.findByIdAndUpdate(
       item.product._id,
