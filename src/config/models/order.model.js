@@ -53,8 +53,8 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cash", "credit_card", "paypal", "mada", "bank_transfer"],
-      default: "cash",
+      enum: [ "credit_card"],
+      default: "credit_card",
     },
     paid: {
       type: Boolean,

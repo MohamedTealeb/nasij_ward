@@ -2,6 +2,7 @@ import { CartModel } from "../../config/models/cart.model.js";
 import { OrderModel } from "../../config/models/order.model.js";
 import { ProductModel } from "../../config/models/product.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
+import axios from 'axios';
 export const createOrder = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const { shippingAddress, paymentMethod, notes, shippingCost } = req.body;
@@ -102,3 +103,24 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
     data: { order },
   });
 });
+
+
+
+export const getOrderByIdAdmin = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
+  
+  const order = await OrderModel.findById(orderId)
+    .populate("items.product")
+    .populate("user", "firstName lastName email phone  ");
+    
+  if (!order) {
+    return next(new Error("Order not found", { cause: 404 }));
+  }
+  
+  return successResponse({
+    res,
+    message: "Order fetched successfully",
+    data: { order },
+  });
+});
+

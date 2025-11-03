@@ -271,9 +271,6 @@ export const addWishlistToCart = asyncHandler(async (req, res, next) => {
 });
 
 
-/* =========================
-   🔄 Merge Guest Cart on Login
-========================= */
 export const mergeGuestCart = asyncHandler(async (req, res, next) => {
   if (!req.user) return next(new Error("Authentication required", { cause: 401 }));
 
