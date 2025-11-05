@@ -120,3 +120,65 @@ export const refundPayment = async (req, res) => {
     });
   }
 }
+
+export const handleMoyasarWebhook = async (req, res) => {
+  try {
+    const event = req.body;
+
+    if (!event || !event.id || !event.status) {
+      return res.status(400).json({ success: false, message: 'Invalid webhook payload' });
+    }
+
+    // البيانات اللي بتيجي من مويصر
+    const { id: paymentId, status, amount, metadata, source } = event;
+
+    // الـ order_id بنجيبه من metadata اللي انت بتبعتها وقت الإنشاء
+    const orderId = metadata?.order_id;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Missing order_id in metadata' });
+    }
+
+    const updateData = {
+      paymentInfo: {
+        id: paymentId,
+        status,
+        source: {
+          type: source?.type,
+          company: source?.company,
+          transactionUrl: source?.transaction_url,
+        },
+      },
+      paidAt: new Date(),
+    };
+
+    // تحديث الحالة بناءً على status اللي رجع من مويصر
+    switch (status) {
+      case 'paid':
+      case 'authorized':
+        updateData.status = 'confirmed';
+        updateData.paid = true;
+        break;
+      case 'failed':
+      case 'declined':
+        updateData.status = 'cancelled';
+        updateData.paid = false;
+        break;
+      case 'refunded':
+        updateData.status = 'cancelled';
+        updateData.paid = false;
+        break;
+      default:
+        updateData.status = 'pending';
+    }
+
+    // تحديث الطلب
+    await OrderModel.findByIdAndUpdate(orderId, updateData);
+
+    console.log(`✅ Order ${orderId} updated via Moyasar webhook (${status})`);
+
+    return res.status(200).json({ success: true, message: 'Webhook processed successfully' });
+  } catch (error) {
+    console.error('Webhook Error:', error);
+    return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};

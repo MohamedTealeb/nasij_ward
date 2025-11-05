@@ -35,7 +35,7 @@ const cartSchema = new mongoose.Schema(
       index: true,
     },
         sessionId: {
-      type: String, // ✅ ده نستخدمه للـ guest cart
+      type: String, 
       index: true,
     },
     items: [cartItemSchema],
@@ -50,7 +50,7 @@ const cartSchema = new mongoose.Schema(
     },
       expiresAt: {
       type: Date,
-      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // ✅ بعد أسبوع cart guest تنتهي
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   },
   { timestamps: true }

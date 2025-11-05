@@ -36,6 +36,14 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    taxPrice: {
+      type: Number,
+      default: 0,
+    },
+    finalPrice: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
       enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
@@ -53,8 +61,8 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: [ "credit_card"],
-      default: "credit_card",
+      enum: ["creditcard", "applepay"]
+     
     },
     paid: {
       type: Boolean,
@@ -83,6 +91,18 @@ const orderSchema = new mongoose.Schema(
 
 // Generate order number before saving
 orderSchema.pre('save', async function(next) {
+  // Compute tax at 15% of total price
+  if (typeof this.totalPrice === 'number') {
+    const computedTax = Math.round(this.totalPrice * 0.15 * 100) / 100;
+    this.taxPrice = computedTax;
+  }
+  // Compute final price: total + tax + shipping
+  if (typeof this.totalPrice === 'number') {
+    const shipping = typeof this.shippingCost === 'number' ? this.shippingCost : 0;
+    const tax = typeof this.taxPrice === 'number' ? this.taxPrice : 0;
+    const computedFinal = Math.round((this.totalPrice + tax + shipping) * 100) / 100;
+    this.finalPrice = computedFinal;
+  }
   if (!this.orderNumber) {
     const count = await mongoose.models.Order?.countDocuments() || 0;
     this.orderNumber = `ORD-${Date.now()}-${(count + 1).toString().padStart(4, '0')}`;
