@@ -13,9 +13,7 @@ const getSessionId = (req) => {
   }
 };
 
-/* =========================
-   🛒 Get Cart
-========================= */
+
 export const getCart = asyncHandler(async (req, res, next) => {
   let cart;
 
@@ -50,9 +48,7 @@ export const getCart = asyncHandler(async (req, res, next) => {
   });
 });
 
-/* =========================
-   ➕ Add to Cart
-========================= */
+
 export const addToCart = asyncHandler(async (req, res, next) => {
   const { productId, quantity, color, size } = req.body;
   const qty = Number(quantity);
@@ -66,7 +62,6 @@ export const addToCart = asyncHandler(async (req, res, next) => {
   const product = await ProductModel.findById(productId);
   if (!product) return next(new Error("Product not found", { cause: 404 }));
 
-  // ✅ إذا المنتج له خيارات، color/size مطلوبين
   if (product.hasVariants && (!color || !size)) {
     return next(new Error("Color and size are required for this product", { cause: 400 }));
   }
@@ -99,9 +94,7 @@ export const addToCart = asyncHandler(async (req, res, next) => {
   });
 });
 
-/* =========================
-   ❌ Remove from Cart
-========================= */
+
 export const removeFromCart = asyncHandler(async (req, res, next) => {
   const { productId } = req.params;
   const { color, size } = req.body;
@@ -152,9 +145,6 @@ export const removeFromCart = asyncHandler(async (req, res, next) => {
 });
 
 
-/* =========================
-   🔁 Update Cart Item Quantity
-========================= */
 export const updateCartItemQuantity = asyncHandler(async (req, res, next) => {
   const { productId } = req.params;
   const { quantity, color, size } = req.body; // ✅ لازم نستقبل color و size
@@ -204,9 +194,7 @@ export const updateCartItemQuantity = asyncHandler(async (req, res, next) => {
   });
 });
 
-/* =========================
-   💖 Add Wishlist to Cart
-========================= */
+
 export const addWishlistToCart = asyncHandler(async (req, res, next) => {
   if (!req.user)
     return next(new Error("Authentication required", { cause: 401 }));

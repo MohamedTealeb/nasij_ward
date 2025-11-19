@@ -61,7 +61,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["creditcard", "applepay"]
+      enum: ["creditcard", "applepay", "mada",],
      
     },
     paid: {
@@ -89,14 +89,11 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Generate order number before saving
 orderSchema.pre('save', async function(next) {
-  // Compute tax at 15% of total price
   if (typeof this.totalPrice === 'number') {
     const computedTax = Math.round(this.totalPrice * 0.15 * 100) / 100;
     this.taxPrice = computedTax;
   }
-  // Compute final price: total + tax + shipping
   if (typeof this.totalPrice === 'number') {
     const shipping = typeof this.shippingCost === 'number' ? this.shippingCost : 0;
     const tax = typeof this.taxPrice === 'number' ? this.taxPrice : 0;

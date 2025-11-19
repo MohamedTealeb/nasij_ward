@@ -56,7 +56,6 @@ const cartSchema = new mongoose.Schema(
   { timestamps: true }
 );
 cartSchema.methods.addItem = function (productId, price, quantity = 1, color, size) {
-  // Convert color and size to arrays if they're strings
   const colorArray = Array.isArray(color) ? color : [color];
   const sizeArray = Array.isArray(size) ? size : [size];
   

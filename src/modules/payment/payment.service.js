@@ -56,7 +56,7 @@ export const createPayment = async (req, res) => {
     const payment = response.data;
     if (payment?.status === 'paid' || payment?.status === 'authorized') {
       await OrderModel.findByIdAndUpdate(order._id, {
-        status: 'initiated',
+        status: 'paid',
         paid: true,
         paidAt: new Date(),
         paymentMethod: 'credit_card',
@@ -77,7 +77,7 @@ export const createPayment = async (req, res) => {
 export const refundPayment = async (req, res) => {
   try {
     const paymentId = req.params.id || req.body.paymentId;
-    const { amount } = req.body;
+
 
     if (!paymentId) {
       return res.status(400).json({
@@ -103,7 +103,7 @@ export const refundPayment = async (req, res) => {
     const refundedOrderId = refund?.metadata?.order_id;
     if (refundedOrderId) {
       await OrderModel.findByIdAndUpdate(refundedOrderId, {
-        status: 'cancelled',
+        status: 'refunded',
         paid: false,
       });
     }
@@ -129,10 +129,8 @@ export const handleMoyasarWebhook = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid webhook payload' });
     }
 
-    // البيانات اللي بتيجي من مويصر
     const { id: paymentId, status, amount, metadata, source } = event;
 
-    // الـ order_id بنجيبه من metadata اللي انت بتبعتها وقت الإنشاء
     const orderId = metadata?.order_id;
     if (!orderId) {
       return res.status(400).json({ success: false, message: 'Missing order_id in metadata' });
@@ -151,11 +149,10 @@ export const handleMoyasarWebhook = async (req, res) => {
       paidAt: new Date(),
     };
 
-    // تحديث الحالة بناءً على status اللي رجع من مويصر
     switch (status) {
       case 'paid':
       case 'authorized':
-        updateData.status = 'confirmed';
+        updateData.status = 'paid';
         updateData.paid = true;
         break;
       case 'failed':
@@ -164,7 +161,7 @@ export const handleMoyasarWebhook = async (req, res) => {
         updateData.paid = false;
         break;
       case 'refunded':
-        updateData.status = 'cancelled';
+        updateData.status = 'refunded';
         updateData.paid = false;
         break;
       default:
@@ -182,3 +179,19 @@ export const handleMoyasarWebhook = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
+export const cancelPayment = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await OrderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    order.status = 'cancelled';
+    order.paid = false;
+    await order.save();
+    return res.status(200).json({ success: true, message: 'Order cancelled successfully' });
+  } catch (error) {
+    console.error('Cancel Payment Error:', error);
+    return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+}

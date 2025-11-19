@@ -15,6 +15,7 @@ const router = Router();
 // router.get("/", validation(shipmentQueryValidation), shipmentService.getAllShipments);
 // router.get("/track/:trackingNumber", validation(trackingNumberValidation), shipmentService.getShipmentByTrackingNumber);
 
+router.post("/estimate", shipmentService.getShippingCostEstimate);
 router.post("/", authMiddleware, shipmentService.createShipment);
 // router.put("/:id/status", authMiddleware, checkShipmentAccess, validation(updateShipmentStatusValidation), shipmentService.updateShipmentStatus);
 // router.delete("/:id", authMiddleware, checkShipmentAccess, shipmentService.deleteShipment);

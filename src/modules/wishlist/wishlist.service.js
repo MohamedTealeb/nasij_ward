@@ -10,7 +10,7 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
   const wishlist = await WishlistModel.find({ user: userId })
     .populate({
       path: "product",
-      select: "name description price image colors sizes stock createdAt updatedAt",
+      select: "name description price coverImage colors sizes stock createdAt updatedAt",
     });
 
   return successResponse({
