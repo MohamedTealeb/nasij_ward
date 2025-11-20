@@ -7,9 +7,15 @@ export const generalFields={
  email: Joi.string().email({
     minDomainSegments: 2,
     tlds: { allow: ["com", "net", "org", "io", "sa"] },
-  }).required(),password: Joi.string()
-  .pattern(new RegExp(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/))
-  .required(),
+  }).required(),
+  password: Joi.string()
+  .min(8)
+  .pattern(new RegExp(/^(?=.*[A-Z])(?=.*\d)/))
+  .required()
+  .messages({
+    'string.pattern.base': 'Password must contain at least one uppercase letter and one number',
+    'string.min': 'Password must be at least 8 characters long'
+  }),
             confirmPassword:Joi.string().required().valid(Joi.ref("password")),
             phone: Joi.string()
             .pattern(/^(?:\+9665|009665|05)[0-9]{8}$/)
@@ -36,16 +42,16 @@ export const validation=(Schema)=>{
                 // Map schema keys to request properties
                 switch(key) {
                     case 'body':
-                        dataToValidate = req.body
+                        dataToValidate = req.body || {}
                         break
                     case 'params':
-                        dataToValidate = req.params
+                        dataToValidate = req.params || {}
                         break
                     case 'query':
-                        dataToValidate = req.query
+                        dataToValidate = req.query || {}
                         break
                     default:
-                        dataToValidate = req[key]
+                        dataToValidate = req[key] || {}
                 }
                 const validationResult=Schema[key].validate(dataToValidate)
                 if(validationResult.error){

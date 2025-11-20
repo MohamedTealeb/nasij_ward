@@ -5,6 +5,7 @@ import { Router } from "express";
 import { upload } from "../../utils/multer/cloud.multer.js";
 const router = Router();
 router.get("/all", categoryService.allCategories);
+router.get("/:id", categoryService.getCategoryById);
 router.post(
   "/add",
   authMiddleware,

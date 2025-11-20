@@ -2,12 +2,13 @@ import { UserModel } from "../../config/models/user.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 export const AllUsers = asyncHandler(async (req, res, next) => {
   const { id, email, page = 1, limit = 10 } = req.query;
-  let filter = {};
+  let filter = { isDeleted: { $ne: true } };
+  
   if (id) {
     filter._id = id;
   }
   if (email) {
-    filter.email = email;
+    filter.email = { $regex: email, $options: 'i' };
   }
   const pageNumber = parseInt(page) || 1;
   const pageSize = parseInt(limit) || 10;

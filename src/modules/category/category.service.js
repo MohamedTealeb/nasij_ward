@@ -21,7 +21,6 @@ export const allCategories = asyncHandler(async (req, res, next) => {
   const skip = (pageNumber - 1) * pageSize;
   const totalCategories = await CategoryModel.countDocuments(filter);
   const categories = await CategoryModel.find(filter)
-    .populate("products")
     .skip(skip)
     .limit(pageSize);
   return successResponse({
@@ -91,6 +90,23 @@ export const removeCategory = asyncHandler(async (req, res, next) => {
   return successResponse({
     res,
     message: "Category deleted successfully",
+    data: { category },
+  });
+});
+export const getCategoryById = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const category = await CategoryModel.findById(id).populate({
+    path: "products",
+    select: "name description price coverImage createdAt updatedAt colors sizes stock"
+  });
+  
+  if (!category) {
+    return next(new Error("Category not found", { cause: 404 }));
+  }
+  
+  return successResponse({
+    res,
+    message: "Category with products fetched successfully",
     data: { category },
   });
 });
