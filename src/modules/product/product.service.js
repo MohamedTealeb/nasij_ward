@@ -24,7 +24,7 @@ export const allProducts = asyncHandler(async (req, res, next) => {
   const products = await ProductModel.find(filter).populate("category");
 
   if (!products || products.length === 0) {
-    return next(new Error("No products found", { cause: 200 }));
+    return next(new Error("No products found", { cause: 404 }));
   }
 
   return successResponse({
@@ -32,7 +32,6 @@ export const allProducts = asyncHandler(async (req, res, next) => {
     message: "Products fetched successfully",
     data: { products },
   });
-
 });
 export const addProduct = asyncHandler(async (req, res, next) => {
   const { name, description, price, category } = req.body;
