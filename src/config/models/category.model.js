@@ -15,10 +15,11 @@ const categorySchema=new mongoose.Schema({
       default: "",
     },
 },{
-
- timestamps: true
+ timestamps: true,
+ toJSON: { virtuals: true },
+ toObject: { virtuals: true }
 })
-categorySchema.virtual("Product", {
+categorySchema.virtual("products", {
   ref: "Product",          
   localField: "_id",      
   foreignField: "category" 

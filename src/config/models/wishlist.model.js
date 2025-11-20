@@ -11,6 +11,14 @@ const wishlistSchema=new mongoose.Schema({
         ref:"Product",
         requored:true
     },
+    color: {
+        type: [String],
+        required: true,
+    },
+    size: {
+        type: [String],
+        required: true,
+    },
      addedAt: {
       type: Date,
       default: Date.now,
