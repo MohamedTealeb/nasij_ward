@@ -6,7 +6,6 @@ import { CategoryModel } from './../../config/models/category.model.js';
 export const startImageChecker = () => {
   cron.schedule("*/1 * * * *", async () => {
     console.log("🔍 Checking images...");
-
     try {
       const products = await ProductModel.find();
       for (const product of products) {

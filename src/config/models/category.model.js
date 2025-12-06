@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
-
 const categorySchema=new mongoose.Schema({
-
-
  name: {
       type: String,
       required: true,
@@ -17,17 +14,12 @@ const categorySchema=new mongoose.Schema({
       type: String, 
       default: "",
     },
-
-
-
-
 },{
-
- timestamps: true
-
-
+ timestamps: true,
+ toJSON: { virtuals: true },
+ toObject: { virtuals: true }
 })
-categorySchema.virtual("Product", {
+categorySchema.virtual("products", {
   ref: "Product",          
   localField: "_id",      
   foreignField: "category" 

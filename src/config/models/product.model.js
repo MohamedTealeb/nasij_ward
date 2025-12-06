@@ -1,33 +1,47 @@
 import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema(
+const colorSchema = new mongoose.Schema(
   {
+    id:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product"
+     
+    },
     name: {
       type: String,
       required: true,
       trim: true,
     },
-    description: {
+    hex: {
       type: String,
-      default: "",
-    },
-    price: {
-      type: Number,
       required: true,
+      match: /^#([0-9A-F]{3}){1,2}$/i,
     },
     image: {
       type: String,
       default: "",
     },
+  },
+ 
+);
+
+const productSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    price: { type: Number, required: true },
+    coverImage: { type: String, default: "" },
+    images: { type: [String], default: [] },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
     },
+    colors: [colorSchema], 
+    sizes: { type: [String], default: [] },
+    stock: { type: Number, default: 0, min: 0 },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 export const ProductModel = mongoose.model("Product", productSchema);

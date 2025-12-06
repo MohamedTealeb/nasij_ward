@@ -9,17 +9,24 @@ router.post(
   "/add",
   authMiddleware,
   checkRole("admin"),
-  upload.single("image"),
+  upload.fields([
+    { name: "coverImage", maxCount: 1 },
+    { name: "images", maxCount: 20 },
+    { name: "colorImages", maxCount: 20 },
+  ]),
   productService.addProduct
 );
 router.get("/all", productService.allProducts);
-
 
 router.put(
   "/:id",
   authMiddleware,
   checkRole("admin"),
-  upload.single("image"),
+  upload.fields([
+    { name: "coverImage", maxCount: 1 },
+    { name: "images", maxCount: 20 },
+    { name: "colorImages", maxCount: 20 },
+  ]),
   productService.updateProduct
 );
 
