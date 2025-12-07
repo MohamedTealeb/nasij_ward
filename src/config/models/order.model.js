@@ -85,6 +85,16 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    trackingNumber: {
+      type: String,
+      unique: true,
+    },
+    trackingUrl: {
+      type: String,
+    },
+    paymentId: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

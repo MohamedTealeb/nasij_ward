@@ -34,7 +34,7 @@ export const allProducts = asyncHandler(async (req, res, next) => {
     .limit(pageSize);
 
   if (!products || products.length === 0) {
-    return next(new Error("No products found", { cause: 200 }));
+    return next(new Error("No products found", { cause: 404 }));
   }
 
   return successResponse({

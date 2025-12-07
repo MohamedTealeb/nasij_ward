@@ -16,7 +16,7 @@ export const calculateShippingCost = async ({ city, address, orderValue }) => {
 
   const cleanApiKey = otoApiKey.trim().replace(/^Bearer\s+/i, '');
 
-  // Prepare payload for shipping cost estimate
+
   const estimatePayload = {
     to_address: {
       city: city,
@@ -49,19 +49,10 @@ export const calculateShippingCost = async ({ city, address, orderValue }) => {
     console.warn("OTO quote API error:", error.response?.data || error.message);
     
   
-    const cityLower = city.toLowerCase();
+   
 
     
-    if (cityLower.includes("الرياض") || cityLower.includes("riyadh")) {
-      return 25;
-    } else if (cityLower.includes("جدة") || cityLower.includes("jeddah")) {
-      return 30;
-    } else if (cityLower.includes("الدمام") || cityLower.includes("dammam")) {
-      return 35;
-    } else if (cityLower.includes("oto") || cityLower) {
-      return 30;
-    }
-    
+
     return 0;
   }
 };
@@ -126,20 +117,29 @@ export const createShipmentService = async ({ orderId, userId, estimatedDelivery
   }
 
   const deliveryDate = estimatedDelivery || new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-
+  const trackingNumber = otoShipment.tracking_number 
+  const trackingUrl = otoShipment.tracking_url 
   const shipment = await ShipmentModel.create({
     order: orderId,
     user,
     address: JSON.stringify(shippingAddress),
     carrier: "oto السعودية",
-    trackingNumber: otoShipment.tracking_number || otoShipment.trackingNumber,
+    trackingNumber,
     status: otoShipment.status || "pending",
     estimatedDelivery: deliveryDate,
   });
 
-  await OrderModel.findByIdAndUpdate(orderId, {
-    status: "shipped",
-  });
+  const orderUpdate = { status: "shipped" };
+
+  if (trackingNumber) {
+    orderUpdate.trackingNumber = trackingNumber;
+  }
+
+  if (trackingUrl) {
+    orderUpdate.trackingUrl = trackingUrl;
+  }
+
+  await OrderModel.findByIdAndUpdate(orderId, orderUpdate);
 
   return {
     shipment,
