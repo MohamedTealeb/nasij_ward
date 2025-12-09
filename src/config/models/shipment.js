@@ -10,6 +10,8 @@ const shipmentSchema=new mongoose.Schema({
     estimatedDelivery: Date,
     trackingNumber: { type: String, unique: true },
     carrier: { type: String, default: "oto السعودية" },
+    otoOrderId: { type: String },
+    otoAccessToken: { type: String },
 
 
 

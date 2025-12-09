@@ -57,7 +57,7 @@ const port=process.env.PORT
    app.use("/order",orderController)
    app.use("/payment",paymentController)
    app.use("/blog",blogController)
-  //  app.use("/shipment",shipmentController)
+   app.use("/shipment",shipmentController)
    app.use("/review",reviewController)
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
