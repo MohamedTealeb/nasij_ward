@@ -87,7 +87,6 @@ const orderSchema = new mongoose.Schema(
     },
     trackingNumber: {
       type: String,
-      unique: true,
     },
     trackingUrl: {
       type: String,
@@ -98,6 +97,9 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// إنشاء فهرس sparse فريد على trackingNumber (يتجاهل القيم null)
+orderSchema.index({ trackingNumber: 1 }, { unique: true, sparse: true });
 
 orderSchema.pre('save', async function(next) {
   if (typeof this.totalPrice === 'number') {

@@ -2,7 +2,8 @@ import { CartModel } from "../../config/models/cart.model.js";
 import { OrderModel } from "../../config/models/order.model.js";
 import { ProductModel } from "../../config/models/product.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
-import { createShipmentService, calculateShippingCost } from "../shipment/shipment.service.js";
+import { getOtoAccessToken } from "../shipment/shipment.service.js";
+
 
 const orderProductPopulate = {
   path: "items.product",
@@ -38,22 +39,9 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   
   const subtotal = orderItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
   
-  // Calculate shipping cost if not provided and address is available
-  let calculatedShippingCost = shippingCost || 0;
-  if (!shippingCost && shippingAddress && shippingAddress.city) {
-    try {
-      calculatedShippingCost = await calculateShippingCost({
-        city: shippingAddress.city,
-        address: shippingAddress.address,
-        orderValue: subtotal,
-      });
-    } catch (error) {
-      console.error("Error calculating shipping cost:", error.message);
-      // Continue with default shipping cost (0) if calculation fails
-    }
-  }
   
-  const totalPrice = subtotal + calculatedShippingCost;
+  
+  const totalPrice = subtotal ;
   
   const order = await OrderModel.create({
     user: userId,
@@ -62,7 +50,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     shippingAddress,
     paymentMethod: paymentMethod || "cash",
     notes: notes || "",
-    shippingCost: calculatedShippingCost,
+    shippingCost: shippingCost,
   });
 
   for (const item of cart.items) {
@@ -73,12 +61,9 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     );
   }
   await CartModel.findByIdAndDelete(cart._id);
-
-  try {
-    await createShipmentService({ orderId: order._id, userId });
-  } catch (error) {
-    console.error("Failed to create shipment:", error.message);
-  }
+  const token = await getOtoAccessToken();
+  console.log(token);
+ 
 
   return successResponse({
     res,
