@@ -26,9 +26,9 @@ export const calculateShippingCost = async ({ city, address, orderValue }) => {
   };
 
   try {
-  
+
     const response = await axios.post(
-      "https://staging-api.tryoto.com/rest/v2/quote", 
+      "https://staging-api.tryoto.com/rest/v2/quote",
       estimatePayload,
       {
         headers: {
@@ -38,21 +38,15 @@ export const calculateShippingCost = async ({ city, address, orderValue }) => {
       }
     );
 
-    const shippingCost = response.data?.shipping_cost || 
-                        response.data?.cost || 
-                        response.data?.shippingCost ||
-                        response.data?.price ||
-                        0;
+    const shippingCost = response.data?.shipping_cost ||
+      response.data?.cost ||
+      response.data?.shippingCost ||
+      response.data?.price ||
+      0;
 
     return Number(shippingCost) || 0;
   } catch (error) {
     console.warn("OTO quote API error:", error.response?.data || error.message);
-    
-  
-   
-
-    
-
     return 0;
   }
 };
@@ -70,7 +64,7 @@ export const createShipmentService = async ({ orderId, userId, estimatedDelivery
 
   const user = userId || order.user;
   const shippingAddress = order.shippingAddress;
-  
+
   const otoPayload = {
     to_address: {
       name: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
@@ -117,8 +111,8 @@ export const createShipmentService = async ({ orderId, userId, estimatedDelivery
   }
 
   const deliveryDate = estimatedDelivery || new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-  const trackingNumber = otoShipment.tracking_number 
-  const trackingUrl = otoShipment.tracking_url 
+  const trackingNumber = otoShipment.tracking_number
+  const trackingUrl = otoShipment.tracking_url
   const shipment = await ShipmentModel.create({
     order: orderId,
     user,
