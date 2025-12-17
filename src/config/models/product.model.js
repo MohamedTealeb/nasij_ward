@@ -30,6 +30,8 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     price: { type: Number, required: true },
+    sku: { type: String, required: true, unique: true, trim: true },
+    otoProductId: { type: String, default: "" },
     coverImage: { type: String, default: "" },
     images: { type: [String], default: [] },
     category: {

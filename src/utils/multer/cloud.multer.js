@@ -19,11 +19,13 @@ const storage = multer.diskStorage({
       else if (req.baseUrl.includes('/products/colors')) {
         uploadPath = path.join("uploads", "products/colors");
       }
+      else if (req.baseUrl.includes('/banners')) {
+        uploadPath = path.join("uploads", "banners");
+      }
       else {
         uploadPath = path.join("uploads", "general");
       }
 
-      // إنشاء المجلدات لو مش موجودة
       fs.mkdirSync(uploadPath, { recursive: true });
 
       cb(null, uploadPath);
@@ -44,15 +46,27 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp/;
   const ext = path.extname(file.originalname).toLowerCase();
-  const mime = file.mimetype;
+  const mime = (file.mimetype || "").toLowerCase();
 
-  if (allowedTypes.test(ext) && allowedTypes.test(mime)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only images are allowed"), false);
+  // Banners: allow image OR video
+  if (req.baseUrl.includes("/banners")) {
+    const allowedImageExt = [".jpg", ".jpeg", ".png", ".webp"];
+    const allowedVideoExt = [".mp4", ".mov", ".webm", ".mkv"];
+
+    const isImage =
+      allowedImageExt.includes(ext) && mime.startsWith("image/");
+    const isVideo =
+      allowedVideoExt.includes(ext) && mime.startsWith("video/");
+
+    if (isImage || isVideo) return cb(null, true);
+    return cb(new Error("Only image/video files are allowed for banners"), false);
   }
+
+  // Default: images only
+  const allowedImageTypes = /jpeg|jpg|png|webp/;
+  if (allowedImageTypes.test(ext) && allowedImageTypes.test(mime)) return cb(null, true);
+  return cb(new Error("Only images are allowed"), false);
 };
 
 export const upload = multer({ storage, fileFilter });

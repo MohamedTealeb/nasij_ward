@@ -3,6 +3,8 @@ import { CategoryModel } from "../../config/models/category.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 import fs from "fs";
 import path from "path";
+import { createOtoProduct } from "../shipment/shipment.service.js";
+import { v4 as uuidv4 } from "uuid";
 
 export const allProducts = asyncHandler(async (req, res, next) => {
   const { id, name, category, color, size, minPrice, maxPrice, page = 1, limit = 10 } = req.query;
@@ -15,7 +17,6 @@ export const allProducts = asyncHandler(async (req, res, next) => {
   if (color) filter["colors.name"] = { $regex: color, $options: "i" };
   if (size) filter["sizes"] = { $in: [size] };
 
-  // ✅ فلترة السعر
   if (minPrice || maxPrice) {
     filter.price = {};
     if (minPrice) filter.price.$gte = Number(minPrice);
@@ -54,6 +55,8 @@ export const allProducts = asyncHandler(async (req, res, next) => {
 
 
 export const addProduct = asyncHandler(async (req, res, next) => {
+  console.log("OTO_API_BASE:", process.env.OTO_API_BASE);
+  console.log("OTO_ACCESS_TOKEN:", process.env.OTO_ACCESS_TOKEN);
   const { name, description, price, category, colors, sizes, stock } = req.body;
 
   const categoryExists = await CategoryModel.findById(category);
@@ -64,7 +67,6 @@ export const addProduct = asyncHandler(async (req, res, next) => {
   let coverImage = "";
   let images = [];
 
-  // ✅ 1. رفع صور المنتج العامة
   if (req.files?.coverImage?.[0]) {
     coverImage = `/uploads/products/${req.files.coverImage[0].filename}`;
   }
@@ -72,10 +74,8 @@ export const addProduct = asyncHandler(async (req, res, next) => {
     images = req.files.images.map(f => `/uploads/products/${f.filename}`);
   }
 
-  // ✅ 2. رفع صور الألوان
   const colorImages = req.files?.colorImages?.map(f => `/uploads/products/${f.filename}`) || [];
 
-  // ✅ 3. Parse الألوان وربط كل لون بالصورة الخاصة بيه
   let parsedColors = [];
   if (colors) {
     try {
@@ -85,14 +85,13 @@ export const addProduct = asyncHandler(async (req, res, next) => {
       parsedColors = colorsArr.map((color, index) => ({
         name: color.name,
         hex: color.hex,
-        image: colorImages[index] || "", // هنا بيربط الصورة بنفس ترتيبها
+        image: colorImages[index] || "", 
       }));
     } catch (error) {
       return next(new Error("Invalid colors format", { cause: 400 }));
     }
   }
 
-  // ✅ 4. Parse الأحجام
   let parsedSizes = [];
   if (sizes) {
     try {
@@ -102,11 +101,34 @@ export const addProduct = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // ✅ 5. إنشاء المنتج
+  const sku = uuidv4();
+
+  let otoProductId = "";
+  try {
+    const otoProduct = await createOtoProduct({
+      name,
+      sku,
+      price: Number(price),
+      description,
+      categoryName: categoryExists?.name || "",
+      image: coverImage || images[0] || "",
+      taxAmount: 0,
+    });
+    otoProductId =
+      otoProduct?.data?.id ||
+      otoProduct?.id ||
+      otoProduct?.productId ||
+      "";
+  } catch (err) {
+    return next(new Error("Failed to create product in OTO service", { cause: 502 }));
+  }
+
   const product = await ProductModel.create({
     name,
     description,
     price,
+    sku,
+    otoProductId,
     coverImage,
     images,
     category,

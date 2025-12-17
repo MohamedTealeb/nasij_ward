@@ -23,3 +23,14 @@ export const getReviews=asyncHandler(async(req,res,next)=>{
         data:{reviews},
     })
 })
+export const deleteReview=asyncHandler(async(req,res,next)=>{
+    const {id}=req.params;
+    const deletedReview=await ReviewModel.findByIdAndDelete(id);
+    if(!deletedReview){
+        return next(new Error("Review not found",{cause:404}));
+    }
+    return successResponse({
+        res,
+        message:"Review deleted successfully",
+    })
+})
