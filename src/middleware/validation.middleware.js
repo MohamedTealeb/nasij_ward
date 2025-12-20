@@ -17,9 +17,10 @@ export const generalFields={
     'string.min': 'Password must be at least 8 characters long'
   }),
             confirmPassword:Joi.string().required().valid(Joi.ref("password")),
-            phone: Joi.string()
-            .pattern(/^(?:\+9665|009665|05)[0-9]{8}$/)
-            .required(),
+           phone: Joi.string()
+  .pattern(/^\+?\d+$/)
+  .required(),
+
                     otp:Joi.string().pattern(new RegExp(/^\d{6}$/)).required(),
             userId: Joi.string().custom((value, helpers) => {
                 if (!Types.ObjectId.isValid(value)) {
