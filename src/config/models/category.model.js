@@ -1,12 +1,20 @@
 import mongoose from "mongoose";
 const categorySchema=new mongoose.Schema({
- name: {
+ name_ar: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
-    description: {
+    name_en: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description_ar: {
+      type: String,
+      default: "",
+    },
+    description_en: {
       type: String,
       default: "",
     },

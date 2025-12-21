@@ -11,7 +11,10 @@ export const allCategories = asyncHandler(async (req, res, next) => {
     filter._id = id;
   }
   if (name) {
-    filter.name = { $regex: name, $options: "i" };
+    filter.$or = [
+      { name_ar: { $regex: name, $options: "i" } },
+      { name_en: { $regex: name, $options: "i" } }
+    ];
   }
   if (product) {
     filter.products = product;
@@ -39,11 +42,11 @@ export const allCategories = asyncHandler(async (req, res, next) => {
 });
 
 export const addCategory = asyncHandler(async (req, res, next) => {
-  const { name, description } = req.body;  
+  const { name_ar, name_en, description_ar, description_en } = req.body;  
   console.log("Add category - Request body:", req.body);
   console.log("Add category - Request file:", req.file);
   const image = req.file ? `/uploads/categories/${req.file.filename}` : "";
-  const category = await CategoryModel.create({ name, description, image });
+  const category = await CategoryModel.create({ name_ar, name_en, description_ar, description_en, image });
   return successResponse({
     res,
     message: "Category created successfully",
@@ -97,7 +100,7 @@ export const getCategoryById = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const category = await CategoryModel.findById(id).populate({
     path: "products",
-    select: "name description price coverImage createdAt updatedAt colors sizes stock"
+    select: "name_ar name_en description_ar description_en price coverImage createdAt updatedAt colors sizes stock"
   });
   
   if (!category) {

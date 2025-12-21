@@ -4,14 +4,14 @@ import { asyncHandler, successResponse } from "../../utils/response.js";
 
 export const createBlog = asyncHandler(async (req, res, next) => {
   const body = req.body || {};
-  const { description } = body;
+  const { description_ar, description_en } = body;
 
-  // ✅ معالجة آمنة لـ req.file
   const image = req.file ? `/uploads/blogs/${req.file.filename}` : "";
   
   const blogData = {
     image,
-    description
+    description_ar,
+    description_en
   };
 
   const blog = await BlogModel.create(blogData);
@@ -45,7 +45,10 @@ export const getAllBlogs = asyncHandler(async (req, res, next) => {
 
   // Add search filter
   if (search) {
-    filter.description = { $regex: search, $options: "i" };
+    filter.$or = [
+      { description_ar: { $regex: search, $options: "i" } },
+      { description_en: { $regex: search, $options: "i" } }
+    ];
   }
 
   const pageNumber = parseInt(page);
@@ -86,15 +89,18 @@ export const updateBlog = asyncHandler(async (req, res, next) => {
   
   // ✅ معالجة آمنة لـ req.body
   const body = req.body || {};
-  const { description } = body;
+  const { description_ar, description_en } = body;
   
   // ✅ معالجة آمنة لـ req.file
   const image = req.file ? `/uploads/blogs/${req.file.filename}` : "";
   
   // ✅ إنشاء updateData مع التحقق من وجود البيانات
   const updateData = {};
-  if (description !== undefined) {
-    updateData.description = description;
+  if (description_ar !== undefined) {
+    updateData.description_ar = description_ar;
+  }
+  if (description_en !== undefined) {
+    updateData.description_en = description_en;
   }
   if (image) {
     updateData.image = image;

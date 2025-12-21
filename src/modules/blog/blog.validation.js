@@ -4,14 +4,23 @@ import Joi from "joi";
 export const createBlogValidation = {
   body: Joi.object({
     image: Joi.string().optional(),
-    description: Joi.string()
-      .min(10)
-      .max(1000)
+    description_ar: Joi.string()
+      .min(5)
+      .max(60000)
       .required()
       .messages({
-        "string.min": "Blog description must be at least 10 characters",
-        "string.max": "Blog description cannot exceed 1000 characters",
-        "any.required": "Blog description is required"
+        "string.min": "Blog description in Arabic must be at least 5 characters",
+        "string.max": "Blog description in Arabic cannot exceed 60000 characters",
+        "any.required": "Blog description in Arabic is required"
+      }),
+    description_en: Joi.string()
+      .min(5)
+      .max(60000)
+      .required()
+      .messages({
+        "string.min": "Blog description in English must be at least 5 characters",
+        "string.max": "Blog description in English cannot exceed 60000 characters",
+        "any.required": "Blog description in English is required"
       })
   })
 };
@@ -20,14 +29,23 @@ export const createBlogValidation = {
 export const updateBlogValidation = {
   body: Joi.object({
     image: Joi.string().optional(),
-    description: Joi.string()
+    description_ar: Joi.string()
       .min(5)
-      .max(1000)
+      .max(60000)
       .optional()
       .allow("")
       .messages({
-        "string.min": "Blog description must be at least 10 characters",
-        "string.max": "Blog description cannot exceed 1000 characters"
+        "string.min": "Blog description in Arabic must be at least 5 characters",
+        "string.max": "Blog description in Arabic cannot exceed 60000 characters"
+      }),
+    description_en: Joi.string()
+      .min(5)
+      .max(60000)
+      .optional()
+      .allow("")
+      .messages({
+        "string.min": "Blog description in English must be at least 5 characters",
+        "string.max": "Blog description in English cannot exceed 60000 characters"
       })
   }).optional()
 };

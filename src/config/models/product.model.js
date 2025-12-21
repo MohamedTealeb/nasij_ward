@@ -27,8 +27,10 @@ const colorSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
-    description: { type: String, default: "" },
+    name_ar: { type: String, required: true, trim: true },
+    name_en: { type: String, required: true, trim: true },
+    description_ar: { type: String, default: "" },
+    description_en: { type: String, default: "" },
     price: { type: Number, required: true },
     sku: { type: String, required: true, unique: true, trim: true },
     otoProductId: { type: String, default: "" },

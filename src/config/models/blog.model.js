@@ -5,11 +5,17 @@ const blogSchema = new mongoose.Schema({
     type: String,
     required: [true, "Blog image is required"],
   },
-  description: {
+  description_ar: {
     type: String,
-    required: [true, "Blog description is required"],
-    minlength: [5, "Blog description must be at least 10 characters"],
-    maxlength: [60000, "Blog description cannot exceed 1000 characters"]
+    required: [true, "Blog description in Arabic is required"],
+    minlength: [5, "Blog description must be at least 5 characters"],
+    maxlength: [60000, "Blog description cannot exceed 60000 characters"]
+  },
+  description_en: {
+    type: String,
+    required: [true, "Blog description in English is required"],
+    minlength: [5, "Blog description must be at least 5 characters"],
+    maxlength: [60000, "Blog description cannot exceed 60000 characters"]
   },
   isDeleted: {
     type: Boolean,
@@ -25,7 +31,7 @@ const blogSchema = new mongoose.Schema({
 });
 
 // Index for better search performance
-blogSchema.index({ description: "text" });
+blogSchema.index({ description_ar: "text", description_en: "text" });
 blogSchema.index({ author: 1 });
 blogSchema.index({ createdAt: -1 });
 

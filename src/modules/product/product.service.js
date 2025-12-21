@@ -12,7 +12,12 @@ export const allProducts = asyncHandler(async (req, res, next) => {
   let filter = {};
 
   if (id) filter._id = id;
-  if (name) filter.name = { $regex: name, $options: "i" };
+  if (name) {
+    filter.$or = [
+      { name_ar: { $regex: name, $options: "i" } },
+      { name_en: { $regex: name, $options: "i" } }
+    ];
+  }
   if (category) filter.category = category;
   if (color) filter["colors.name"] = { $regex: color, $options: "i" };
   if (size) filter["sizes"] = { $in: [size] };
@@ -57,7 +62,7 @@ export const allProducts = asyncHandler(async (req, res, next) => {
 export const addProduct = asyncHandler(async (req, res, next) => {
   console.log("OTO_API_BASE:", process.env.OTO_API_BASE);
   console.log("OTO_ACCESS_TOKEN:", process.env.OTO_ACCESS_TOKEN);
-  const { name, description, price, category, colors, sizes, stock } = req.body;
+  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock } = req.body;
 
   const categoryExists = await CategoryModel.findById(category);
   if (!categoryExists) {
@@ -106,11 +111,11 @@ export const addProduct = asyncHandler(async (req, res, next) => {
   let otoProductId = "";
   try {
     const otoProduct = await createOtoProduct({
-      name,
+      name: name_en || name_ar,
       sku,
       price: Number(price),
-      description,
-      categoryName: categoryExists?.name || "",
+      description: description_en || description_ar,
+      categoryName: categoryExists?.name_en || categoryExists?.name_ar || "",
       image: coverImage || images[0] || "",
       taxAmount: 0,
     });
@@ -124,8 +129,10 @@ export const addProduct = asyncHandler(async (req, res, next) => {
   }
 
   const product = await ProductModel.create({
-    name,
-    description,
+    name_ar,
+    name_en,
+    description_ar,
+    description_en,
     price,
     sku,
     otoProductId,
@@ -151,7 +158,7 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
     return next(new Error("Product not found", { cause: 404 }));
   }
 
-  const { name, description, price, category, colors, sizes, stock } = req.body;
+  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock } = req.body;
   const updateData = {};
 
   // ✅ 1. التأكد من صلاحية الـ Category لو اتغيرت
@@ -215,8 +222,10 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
   }
 
   // ✅ 6. باقي الحقول الأساسية
-  if (name) updateData.name = name;
-  if (description) updateData.description = description;
+  if (name_ar) updateData.name_ar = name_ar;
+  if (name_en) updateData.name_en = name_en;
+  if (description_ar) updateData.description_ar = description_ar;
+  if (description_en) updateData.description_en = description_en;
   if (price) updateData.price = price;
   if (stock !== undefined) updateData.stock = stock;
 
