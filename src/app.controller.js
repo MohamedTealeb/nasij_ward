@@ -23,6 +23,7 @@ import { globalErrorHandling } from './utils/response.js';
 import shipmentController from './modules/shipment/shipment.controller.js';
 import bannerController from './modules/banner/banner.controller.js';
 import reviewController from './modules/review/review.controller.js';
+import promoCodeController from './modules/promoCode/promoCode.controller.js';
 export const Bootstrap=async()=>{
 const app=express();
 const port=process.env.PORT
@@ -61,6 +62,7 @@ const port=process.env.PORT
    app.use("/shipment",shipmentController)
    app.use("/review",reviewController)
    app.use('/banners',bannerController);
+   app.use("/promoCode",promoCodeController);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use(globalErrorHandling);
