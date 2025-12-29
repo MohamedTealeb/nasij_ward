@@ -7,14 +7,11 @@ import {
   createPromoCodeValidation,
   updatePromoCodeValidation,
   promoCodeIdValidation,
-  validatePromoCodeValidation,
+
   promoCodeQueryValidation,
 } from "./promoCode.validation.js";
 
 const router = Router();
-
-// Public route - validate promo code (accepts any body)
-router.post("/validate", promoCodeService.validatePromoCode);
 
 // Public route - get all promo codes (for admin viewing)
 router.get(
