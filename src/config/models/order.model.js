@@ -94,6 +94,16 @@ const orderSchema = new mongoose.Schema(
     paymentId: {
       type: String,
     },
+    promoCode: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PromoCode",
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
@@ -103,14 +113,17 @@ orderSchema.index({ trackingNumber: 1 }, { unique: true, sparse: true });
 
 orderSchema.pre('save', async function(next) {
   if (typeof this.totalPrice === 'number') {
+    // Calculate tax on totalPrice before discount
     const computedTax = Math.round(this.totalPrice * 0.15 * 100) / 100;
     this.taxPrice = computedTax;
   }
   if (typeof this.totalPrice === 'number') {
     const shipping = typeof this.shippingCost === 'number' ? this.shippingCost : 0;
     const tax = typeof this.taxPrice === 'number' ? this.taxPrice : 0;
-    const computedFinal = Math.round((this.totalPrice + tax + shipping) * 100) / 100;
-    this.finalPrice = computedFinal;
+    const discount = typeof this.discountAmount === 'number' ? this.discountAmount : 0;
+    // Calculate final price: totalPrice + tax + shipping - discount
+    const computedFinal = Math.round((this.totalPrice + tax + shipping - discount) * 100) / 100;
+    this.finalPrice = Math.max(0, computedFinal); // Ensure final price is not negative
   }
   if (!this.orderNumber) {
     const count = await mongoose.models.Order?.countDocuments() || 0;
