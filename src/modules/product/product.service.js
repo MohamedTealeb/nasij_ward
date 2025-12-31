@@ -10,44 +10,82 @@ export const allProducts = asyncHandler(async (req, res, next) => {
   const { id, name, category, color, size, minPrice, maxPrice, page = 1, limit = 10 } = req.query;
 
   let filter = {};
+  const andConditions = [];
 
-  if (id) filter._id = id;
+  if (id) {
+    filter._id = id;
+  }
+  
+  // Search by name and description (Arabic or English)
   if (name) {
+    const searchTerm = name.trim();
+    // Escape special regex characters and create flexible search
+    const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
     filter.$or = [
-      { name_ar: { $regex: name, $options: "i" } },
-      { name_en: { $regex: name, $options: "i" } }
+      { name_ar: { $regex: escapedTerm, $options: "i" } },
+      { name_en: { $regex: escapedTerm, $options: "i" } },
+      { description_ar: { $regex: escapedTerm, $options: "i" } },
+      { description_en: { $regex: escapedTerm, $options: "i" } }
     ];
   }
-  if (category) filter.category = category;
-  if (color) filter["colors.name"] = { $regex: color, $options: "i" };
-  if (size) filter["sizes"] = { $in: [size] };
+  
+  if (category) {
+    andConditions.push({ category: category });
+  }
+  if (color) {
+    andConditions.push({ "colors.name": { $regex: color, $options: "i" } });
+  }
+  if (size) {
+    andConditions.push({ sizes: { $in: [size] } });
+  }
 
   if (minPrice || maxPrice) {
-    filter.price = {};
-    if (minPrice) filter.price.$gte = Number(minPrice);
-    if (maxPrice) filter.price.$lte = Number(maxPrice);
+    const priceFilter = {};
+    if (minPrice) priceFilter.$gte = Number(minPrice);
+    if (maxPrice) priceFilter.$lte = Number(maxPrice);
+    andConditions.push({ price: priceFilter });
+  }
+
+  // If we have additional conditions, combine with $and
+  if (andConditions.length > 0) {
+    if (filter.$or) {
+      // If we have both $or (from name search) and other conditions, use $and
+      filter = {
+        $and: [
+          { $or: filter.$or },
+          ...andConditions
+        ]
+      };
+    } else {
+      // If we only have other conditions (no name search), add them directly
+      andConditions.forEach(condition => {
+        Object.assign(filter, condition);
+      });
+    }
   }
 
   const pageNumber = parseInt(page) || 1;
   const pageSize = parseInt(limit) || 10;
   const skip = (pageNumber - 1) * pageSize;
 
+  // Debug: log the filter to see what we're searching for
+  console.log("Search filter:", JSON.stringify(filter, null, 2));
+  console.log("Search term:", name);
+
   const totalProducts = await ProductModel.countDocuments(filter);
 
   const products = await ProductModel.find(filter)
     .populate("category")
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(pageSize);
-
-  if (!products || products.length === 0) {
-    return next(new Error("No products found", { cause: 404 }));
-  }
 
   return successResponse({
     res,
     message: "Products fetched successfully",
     data: {
-      products,
+      products: products || [],
       pagination: {
         total: totalProducts,
         page: pageNumber,
