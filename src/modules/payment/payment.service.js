@@ -51,8 +51,7 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Use finalPrice which includes tax, shipping, and discount
-    const amountInHalalas = Math.round(Number(order.finalPrice || order.totalPrice) * 100);
+    const amountInHalalas = Math.round(Number(order.totalPrice) * 100);
     const description = `Order ${order.orderNumber || order._id}`;
     const metadata = {
       order_id: String(order._id),

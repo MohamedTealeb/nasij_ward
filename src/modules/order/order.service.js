@@ -1,7 +1,6 @@
 import { CartModel } from "../../config/models/cart.model.js";
 import { OrderModel } from "../../config/models/order.model.js";
 import { ProductModel } from "../../config/models/product.model.js";
-import { PromoCodeModel } from "../../config/models/promoCode.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 import { getOtoAccessToken } from "../shipment/shipment.service.js";
 
@@ -10,14 +9,9 @@ const orderProductPopulate = {
   path: "items.product",
   select: "name slug sku price salePrice coverImage images stock",
 };
-
-const promoCodePopulate = {
-  path: "promoCode",
-  select: "code discountType discountValue description_ar description_en",
-};
 export const createOrder = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
-  const { shippingAddress, paymentMethod, notes, shippingCost, promoCode } = req.body;
+  const { shippingAddress, paymentMethod, notes, shippingCost } = req.body;
   
   let cart = await CartModel.findOne({ user: userId, status: "active" }).populate("items.product");
   
@@ -44,70 +38,10 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   }));
   
   const subtotal = orderItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
-  const totalPrice = subtotal;
   
-  // Validate and apply promo code if provided
-  let promoCodeId = null;
-  let discountAmount = 0;
   
-  if (promoCode) {
-    const promoCodeDoc = await PromoCodeModel.findOne({
-      code: promoCode.toUpperCase(),
-    });
-    
-    if (!promoCodeDoc) {
-      return next(new Error("Invalid promo code", { cause: 400 }));
-    }
-    
-    // Check if active
-    if (!promoCodeDoc.isActive) {
-      return next(new Error("Promo code is not active", { cause: 400 }));
-    }
-    
-    // Check date validity
-    const now = new Date();
-    if (now < promoCodeDoc.startDate) {
-      return next(new Error("Promo code has not started yet", { cause: 400 }));
-    }
-    if (now > promoCodeDoc.endDate) {
-      return next(new Error("Promo code has expired", { cause: 400 }));
-    }
-    
-    // Check usage limit
-    if (promoCodeDoc.maxUses !== null && promoCodeDoc.usedCount >= promoCodeDoc.maxUses) {
-      return next(new Error("Promo code has reached maximum uses", { cause: 400 }));
-    }
-    
-    // Check minimum purchase amount
-    if (totalPrice < promoCodeDoc.minPurchaseAmount) {
-      return next(
-        new Error(
-          `Minimum purchase amount is ${promoCodeDoc.minPurchaseAmount} SAR`,
-          { cause: 400 }
-        )
-      );
-    }
-    
-    // Calculate discount
-    if (promoCodeDoc.discountType === "percentage") {
-      discountAmount = Math.round((totalPrice * promoCodeDoc.discountValue) / 100 * 100) / 100;
-    } else {
-      discountAmount = promoCodeDoc.discountValue;
-      // Ensure discount doesn't exceed total amount
-      if (discountAmount > totalPrice) {
-        discountAmount = totalPrice;
-      }
-    }
-    
-    promoCodeId = promoCodeDoc._id;
-    
-    // Increment used count
-    await PromoCodeModel.findByIdAndUpdate(
-      promoCodeDoc._id,
-      { $inc: { usedCount: 1 } },
-      { new: true }
-    );
-  }
+  
+  const totalPrice = subtotal ;
   
   const order = await OrderModel.create({
     user: userId,
@@ -116,9 +50,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     shippingAddress,
     paymentMethod: paymentMethod || "cash",
     notes: notes || "",
-    shippingCost: shippingCost || 0,
-    promoCode: promoCodeId,
-    discountAmount: discountAmount,
+    shippingCost: shippingCost,
   });
 
   for (const item of cart.items) {
@@ -143,7 +75,6 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const orders = await OrderModel.find({ user: userId })
     .populate(orderProductPopulate)
-    .populate(promoCodePopulate)
     .populate("user", "firstName lastName email phone ");
   return successResponse({
     res,
@@ -154,7 +85,6 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
 export const getAllOrders = asyncHandler(async (req, res, next) => {
   const orders = await OrderModel.find()
     .populate(orderProductPopulate)
-    .populate(promoCodePopulate)
     .populate("user", "firstName lastName email phone");
   return successResponse({
     res,
@@ -172,7 +102,6 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
     user: userId 
   })
     .populate(orderProductPopulate)
-    .populate(promoCodePopulate)
     .populate("user", "firstName lastName email phone");
     
   if (!order) {
@@ -193,7 +122,6 @@ export const getOrderByIdAdmin = asyncHandler(async (req, res, next) => {
   
   const order = await OrderModel.findById(orderId)
     .populate(orderProductPopulate)
-    .populate(promoCodePopulate)
     .populate("user", "firstName lastName email phone    ");
     
   if (!order) {
