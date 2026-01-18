@@ -48,7 +48,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     items: orderItems,
     totalPrice,
     shippingAddress,
-    paymentMethod: paymentMethod || "cash",
+    paymentMethod: paymentMethod ,
     notes: notes || "",
     shippingCost: shippingCost,
   });
