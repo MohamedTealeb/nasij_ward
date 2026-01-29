@@ -100,7 +100,19 @@ export const allProducts = asyncHandler(async (req, res, next) => {
 export const addProduct = asyncHandler(async (req, res, next) => {
   console.log("OTO_API_BASE:", process.env.OTO_API_BASE);
   console.log("OTO_ACCESS_TOKEN:", process.env.OTO_ACCESS_TOKEN);
-  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock } = req.body;
+  const {
+    name_ar,
+    name_en,
+    description_ar,
+    description_en,
+    price,
+    category,
+    colors,
+    sizes,
+    stock,
+    care_instruction_ar,
+    care_instruction_en,
+  } = req.body;
 
   const categoryExists = await CategoryModel.findById(category);
   if (!categoryExists) {
@@ -180,6 +192,8 @@ export const addProduct = asyncHandler(async (req, res, next) => {
     colors: parsedColors,
     sizes: parsedSizes,
     stock,
+    care_instruction_ar,
+    care_instruction_en,
   });
 
   return successResponse({
@@ -196,7 +210,7 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
     return next(new Error("Product not found", { cause: 404 }));
   }
 
-  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock } = req.body;
+  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock, care_instruction_ar, care_instruction_en } = req.body;
   const updateData = {};
 
   // ✅ 1. التأكد من صلاحية الـ Category لو اتغيرت
@@ -265,6 +279,8 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
   if (description_ar) updateData.description_ar = description_ar;
   if (description_en) updateData.description_en = description_en;
   if (price) updateData.price = price;
+  if (care_instruction_ar) updateData.care_instruction_ar = care_instruction_ar;
+  if (care_instruction_en) updateData.care_instruction_en = care_instruction_en;
   if (stock !== undefined) updateData.stock = stock;
 
   // ✅ 7. تحديث المنتج في قاعدة البيانات

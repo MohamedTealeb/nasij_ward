@@ -35,6 +35,14 @@ const productSchema = new mongoose.Schema(
     sku: { type: String, required: true, unique: true, trim: true },
     otoProductId: { type: String, default: "" },
     coverImage: { type: String, default: "" },
+    care_instruction_ar: {
+      type: String,
+      default: "",
+    },
+    care_instruction_en: {
+      type: String,
+      default: "",
+    },
     images: { type: [String], default: [] },
     category: {
       type: mongoose.Schema.Types.ObjectId,
