@@ -63,16 +63,78 @@ export const createOtoProduct = async ({
 
 export const createOtoOrder = async ({
   orderId,
+  pickupLocationCode,
   createShipment,
   deliveryOptionId,
-  address,
+  payment_method,
   amount,
-  status,
-  estimatedDelivery,
-  trackingNumber,
-  carrier,
-  otoOrderId,
-  otoAccessToken,
+  amount_due,
+  currency,
+  customsValue,
+  customsCurrency,
+  packageCount,
+  packageWeight,
+  boxWidth,
+  boxLength,
+  boxHeight,
+  orderDate,
+  deliverySlotDate,
+  deliverySlotTo,
+  deliverySlotFrom,
+  senderName,
+  customer,
+  items,
 }) => {
   const token = await getOtoAccessToken();
-}
+
+  if (!orderId || !pickupLocationCode || !deliveryOptionId || !payment_method || !currency) {
+    throw new Error("Missing required order data for OTO payload");
+  }
+  if (!customer?.name || !customer?.mobile || !customer?.address || !customer?.city || !customer?.country) {
+    throw new Error("Missing required customer data for OTO payload");
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("Missing required items data for OTO payload");
+  }
+
+  const normalizedCreateShipment =
+    typeof createShipment === "string" ? createShipment.toLowerCase() === "true" : Boolean(createShipment);
+
+  const payload = {
+    orderId,
+    pickupLocationCode,
+    createShipment: normalizedCreateShipment,
+    deliveryOptionId,
+    payment_method,
+    amount,
+    amount_due,
+    currency,
+    customsValue,
+    customsCurrency,
+    packageCount,
+    packageWeight,
+    boxWidth,
+    boxLength,
+    boxHeight,
+    orderDate,
+    deliverySlotDate,
+    deliverySlotTo,
+    deliverySlotFrom,
+    senderName,
+    customer,
+    items,
+  };
+
+  try {
+    const response = await axios.post(`${process.env.OTO_API_BASE}/rest/v2/createOrder`, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (err) {
+    console.error("Error creating OTO order:", err?.response?.data || err.message);
+    throw new Error("Failed to create order in OTO");
+  }
+};

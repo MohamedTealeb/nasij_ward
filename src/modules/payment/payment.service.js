@@ -1,6 +1,7 @@
 // payment.service.js
 import axios from 'axios';
 import { OrderModel } from '../../config/models/order.model.js';
+import { createOtoOrder } from '../shipment/shipment.service.js';
 import { v4 as uuidv4 } from 'uuid';
 const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY || 'sk_test_cxC3oG9nj6UFx4BgkcXCUyZU42i9Lwe2wsU6FXk6';
 const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
@@ -30,6 +31,73 @@ const fetchPaymentDetails = async (paymentId) => {
     },
   });
   return response.data;
+};
+
+const formatOtoOrderDate = (date = new Date()) => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+const buildOtoOrderPayload = (order) => {
+  const pickupLocationCode = process.env.OTO_PICKUP_LOCATION_CODE;
+  const deliveryOptionId = Number(process.env.OTO_DELIVERY_OPTION_ID) || undefined;
+
+  const amount = typeof order?.finalPrice === 'number' ? order.finalPrice : order?.totalPrice;
+  const shippingAddress = order?.shippingAddress || {};
+  const customerName = [shippingAddress.firstName, shippingAddress.lastName].filter(Boolean).join(' ').trim();
+
+  const items = (order?.items || []).map((item) => {
+    const product = item?.product || {};
+    const name = product?.name_en || product?.name_ar || 'Item';
+    const price = typeof item?.price === 'number' ? item.price : product?.price;
+    const quantity = item?.quantity || 1;
+    return {
+      productId: product?.otoProductId || product?._id || undefined,
+      name,
+      price,
+      rowTotal: typeof price === 'number' ? price * quantity : undefined,
+      taxAmount: 0,
+      quantity,
+      sku: product?.sku || undefined,
+      image: product?.coverImage || product?.images?.[0] || undefined,
+    };
+  });
+
+  return {
+    orderId: order?.orderNumber || String(order?._id),
+    pickupLocationCode,
+    createShipment: true,
+    deliveryOptionId,
+    payment_method: 'paid',
+    amount,
+    amount_due: 0,
+    currency: 'SAR',
+    customsValue: process.env.OTO_CUSTOMS_VALUE || undefined,
+    customsCurrency: process.env.OTO_CUSTOMS_CURRENCY || 'USD',
+    packageCount: Number(process.env.OTO_PACKAGE_COUNT) || 1,
+    packageWeight: Number(process.env.OTO_PACKAGE_WEIGHT) || 1,
+    boxWidth: Number(process.env.OTO_BOX_WIDTH) || 10,
+    boxLength: Number(process.env.OTO_BOX_LENGTH) || 10,
+    boxHeight: Number(process.env.OTO_BOX_HEIGHT) || 10,
+    orderDate: formatOtoOrderDate(order?.createdAt ? new Date(order.createdAt) : new Date()),
+    senderName: process.env.OTO_SENDER_NAME || undefined,
+    customer: {
+      name: customerName || undefined,
+      email: shippingAddress.email || undefined,
+      mobile: shippingAddress.phone || undefined,
+      address: shippingAddress.address || undefined,
+      district: shippingAddress.district || undefined,
+      city: shippingAddress.city || undefined,
+      country: shippingAddress.country || undefined,
+      postcode: shippingAddress.postalCode || undefined,
+      refID: String(order?._id),
+    },
+    items,
+  };
 };
 
 export const createPayment = async (req, res) => {
@@ -233,7 +301,53 @@ export const handleMoyasarWebhook = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    if (['paid', 'authorized', 'captured'].includes(status)) {
+      const alreadyShipped = ['shipped', 'delivered'].includes(updatedOrder?.status);
+      if (!alreadyShipped && !updatedOrder?.trackingNumber) {
+        const hydratedOrder = await OrderModel.findById(orderId)
+          .populate({ path: 'items.product', select: 'name_ar name_en sku price otoProductId coverImage images' })
+          .populate('user', 'firstName lastName email phone')
+          .lean();
+
+        const otoPayload = buildOtoOrderPayload(hydratedOrder);
+        const otoResponse = await createOtoOrder(otoPayload);
+
+        const trackingNumber =
+          otoResponse?.data?.trackingNumber ||
+          otoResponse?.trackingNumber ||
+          otoResponse?.data?.tracking_number ||
+          otoResponse?.tracking_number ||
+          undefined;
+        const trackingUrl =
+          otoResponse?.data?.trackingUrl ||
+          otoResponse?.trackingUrl ||
+          otoResponse?.data?.tracking_url ||
+          otoResponse?.tracking_url ||
+          undefined;
+
+        await OrderModel.findByIdAndUpdate(orderId, {
+          status: 'shipped',
+          ...(trackingNumber ? { trackingNumber } : {}),
+          ...(trackingUrl ? { trackingUrl } : {}),
+        });
+      }
+    }
+
     console.log(`✅ Order ${orderId} updated via Moyasar callback (${status})`);
+
+    if (req.method === 'GET') {
+      const frontendBaseUrl =
+        process.env.FRONTEND_BASE_URL ||
+        process.env.CLIENT_URL ||
+        `${req.protocol}://${req.get('host')}`;
+      const success = ['paid', 'authorized', 'captured'].includes(status);
+      const message = success ? 'Payment succeeded' : 'Payment failed';
+      const redirectUrl = new URL(frontendBaseUrl);
+      redirectUrl.searchParams.set('paymentStatus', success ? 'success' : 'failed');
+      redirectUrl.searchParams.set('message', message);
+      redirectUrl.searchParams.set('orderId', orderId);
+      return res.redirect(302, redirectUrl.toString());
+    }
 
     return res.status(200).json({
       success: true,
