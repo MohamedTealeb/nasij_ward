@@ -1,18 +1,19 @@
-// payment.service.js
 import axios from 'axios';
 import { OrderModel } from '../../config/models/order.model.js';
 import { createOtoOrder } from '../shipment/shipment.service.js';
 import { v4 as uuidv4 } from 'uuid';
-const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY || 'sk_test_cxC3oG9nj6UFx4BgkcXCUyZU42i9Lwe2wsU6FXk6';
+
+const MOYASAR_SECRET_KEY =
+  process.env.MOYASAR_SECRET_KEY || 'sk_test_cxC3oG9nj6UFx4BgkcXCUyZU42i9Lwe2wsU6FXk6';
 const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
 
+/* -------------------------------- utils -------------------------------- */
 const parseMetadata = (metadata) => {
   if (!metadata) return {};
   if (typeof metadata === 'string') {
     try {
       return JSON.parse(metadata);
-    } catch (error) {
-      console.warn('Failed to parse Moyasar metadata string:', error.message);
+    } catch {
       return {};
     }
   }
@@ -21,359 +22,282 @@ const parseMetadata = (metadata) => {
 
 const fetchPaymentDetails = async (paymentId) => {
   const url = `${MOYASAR_API_URL}/payments/${encodeURIComponent(paymentId)}`;
-  const response = await axios.get(url, {
-    auth: {
-      username: MOYASAR_SECRET_KEY,
-      password: '',
-    },
-    headers: {
-      Accept: 'application/json',
-    },
+  const { data } = await axios.get(url, {
+    auth: { username: MOYASAR_SECRET_KEY, password: '' },
+    headers: { Accept: 'application/json' },
   });
-  return response.data;
-};
-
-const formatOtoOrderDate = (date = new Date()) => {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
+  return data;
 };
 
 const buildOtoOrderPayload = (order) => {
-  const pickupLocationCode = process.env.OTO_PICKUP_LOCATION_CODE;
-  const deliveryOptionId = Number(process.env.OTO_DELIVERY_OPTION_ID) || undefined;
+  console.log('Building OTO payload for order:', order?._id);
+  const shippingAddress = order.shippingAddress || {};
+  const user = order.user || {};
 
-  const amount = typeof order?.finalPrice === 'number' ? order.finalPrice : order?.totalPrice;
-  const shippingAddress = order?.shippingAddress || {};
-  const customerName = [shippingAddress.firstName, shippingAddress.lastName].filter(Boolean).join(' ').trim();
+  const customerName = [
+    shippingAddress.firstName || user.firstName,
+    shippingAddress.lastName || user.lastName,
+  ].filter(Boolean).join(' ').trim();
 
-  const items = (order?.items || []).map((item) => {
-    const product = item?.product || {};
-    const name = product?.name_en || product?.name_ar || 'Item';
-    const price = typeof item?.price === 'number' ? item.price : product?.price;
-    const quantity = item?.quantity || 1;
+  const customerEmail = shippingAddress.email || user.email;
+  const customerPhone = shippingAddress.phone || user.phone;
+  const customerCity = shippingAddress.city || 'Riyadh';
+  const customerAddress = shippingAddress.address || 'KSA';
+  const customerCountry = shippingAddress.country || 'SA';
+
+  const items = (order.items || []).map((item) => {
+    const product = item.product || {};
+    const price = item.price ?? product.price ?? 0;
+    const quantity = item.quantity || 1;
+
+    if (!product.otoProductId && !product._id) {
+       console.warn(`Product ${product.name_en} (SKU: ${product.sku}) is missing otoProductId and _id!`);
+    }
+
     return {
-      productId: product?.otoProductId || product?._id || undefined,
-      name,
+      productId: product.otoProductId || product._id,
+      name: product.name_en || product.name_ar || 'Item',
       price,
-      rowTotal: typeof price === 'number' ? price * quantity : undefined,
-      taxAmount: 0,
+      rowTotal: price * quantity,
       quantity,
-      sku: product?.sku || undefined,
-      image: product?.coverImage || product?.images?.[0] || undefined,
+      sku: product.sku,
+      image: product.coverImage || product.images?.[0],
     };
   });
 
   return {
-    orderId: order?.orderNumber || String(order?._id),
-    pickupLocationCode,
+    orderId: order.orderNumber || String(order._id),
+    pickupLocationCode: process.env.OTO_PICKUP_LOCATION_CODE,
+    deliveryOptionId: Number(process.env.OTO_DELIVERY_OPTION_ID),
     createShipment: true,
-    deliveryOptionId,
     payment_method: 'paid',
-    amount,
+    amount: order.finalPrice ?? order.totalPrice,
     amount_due: 0,
     currency: 'SAR',
-    customsValue: process.env.OTO_CUSTOMS_VALUE || undefined,
-    customsCurrency: process.env.OTO_CUSTOMS_CURRENCY || 'USD',
-    packageCount: Number(process.env.OTO_PACKAGE_COUNT) || 1,
-    packageWeight: Number(process.env.OTO_PACKAGE_WEIGHT) || 1,
-    boxWidth: Number(process.env.OTO_BOX_WIDTH) || 10,
-    boxLength: Number(process.env.OTO_BOX_LENGTH) || 10,
-    boxHeight: Number(process.env.OTO_BOX_HEIGHT) || 10,
-    orderDate: formatOtoOrderDate(order?.createdAt ? new Date(order.createdAt) : new Date()),
-    senderName: process.env.OTO_SENDER_NAME || undefined,
+    packageCount: 1,
+    packageWeight: 1,
+    boxWidth: 10,
+    boxLength: 10,
+    boxHeight: 10,
     customer: {
-      name: customerName || undefined,
-      email: shippingAddress.email || undefined,
-      mobile: shippingAddress.phone || undefined,
-      address: shippingAddress.address || undefined,
-      district: shippingAddress.district || undefined,
-      city: shippingAddress.city || undefined,
-      country: shippingAddress.country || undefined,
-      postcode: shippingAddress.postalCode || undefined,
-      refID: String(order?._id),
+      name: customerName,
+      email: customerEmail,
+      mobile: customerPhone,
+      address: customerAddress,
+      city: customerCity,
+      country: customerCountry,
     },
     items,
   };
 };
 
+/* ----------------------------- create payment ---------------------------- */
 export const createPayment = async (req, res) => {
   try {
-    const { orderId, source, callback_url, webhook_url } = req.body;
+    const { orderId, source } = req.body;
 
-    if (!orderId || !source || !source.type) {
-      return res.status(400).json({
-        success: false,
-        message: 'orderId and valid source are required',
-      });
+    if (!orderId || !source?.type) {
+      return res.status(400).json({ success: false, message: 'orderId and valid source are required' });
     }
 
-    const order = await OrderModel.findOne({ _id: orderId, user: req.user._id }).lean();
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found',
-      });
-    }
+    const order = await OrderModel.findOne({ _id: orderId, user: req.user._id });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    const amountInHalalas = Math.round(Number(order.totalPrice) * 100);
-    const description = `Order ${order.orderNumber || order._id}`;
-    const metadata = {
-      order_id: String(order._id),
-      order_number: order.orderNumber || '',
-      user_id: String(order.user),
-    };
+    const amount = Math.round(Number(order.totalPrice) * 100);
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const callbackUrl = callback_url || `${baseUrl}/payment/callback/moyasar`;
-    const webhookUrl = webhook_url || `${baseUrl}/payment/webhook/moyasar`;
+    const backendBaseUrl = (process.env.BACKEND_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    const callbackUrl = `${backendBaseUrl}/payment/callback/moyasar`;
+    const webhookUrl = `${backendBaseUrl}/payment/webhook/moyasar`;
 
-    const data = {
+    const paymentPayload = {
       given_id: uuidv4(),
-      amount: amountInHalalas,
+      amount,
       currency: 'SAR',
-      description,
+      description: `Order ${order.orderNumber || order._id}`,
       callback_url: callbackUrl,
       webhook_url: webhookUrl,
       source,
-      metadata,
+      metadata: { order_id: String(order._id), user_id: String(order.user) },
     };
 
-    const response = await axios.post(`${MOYASAR_API_URL}/payments`, data, {
-      auth: {
-        username: MOYASAR_SECRET_KEY,
-        password: ''
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+    const { data: payment } = await axios.post(
+      `${MOYASAR_API_URL}/payments`,
+      paymentPayload,
+      { auth: { username: MOYASAR_SECRET_KEY, password: '' }, headers: { 'Content-Type': 'application/json' } }
+    );
+
+    console.log('Payment Creation - Callback URL:', callbackUrl);
+    console.log('Payment Creation - Webhook URL:', webhookUrl);
+
+    console.log('Moyasar payment created:', {
+      id: payment?.id,
+      status: payment?.status,
+      hasTransactionUrl: Boolean(payment?.source?.transaction_url),
+      transactionUrl: payment?.source?.transaction_url,
     });
 
-    const payment = response.data;
-    const orderUpdate = {};
+    await OrderModel.findByIdAndUpdate(order._id, {
+      paymentId: payment.id,
+      status: 'pending',
+      paymentStatus: payment.status.toLowerCase(),
+    });
 
-    if (payment?.id) {
-      orderUpdate.paymentId = payment.id;
-    }
-
-    if (payment?.status === 'paid' || payment?.status === 'authorized') {
-      Object.assign(orderUpdate, {
-        status: 'paid',
-        paid: true,
-        paidAt: new Date(),
-        paymentMethod: payment.source?.type || 'moyasar',
+    if (payment.status.toLowerCase() === 'initiated') {
+      console.log('Payment initiated, awaiting 3DS:', {
+        paymentId: payment?.id,
+        transactionUrl: payment?.source?.transaction_url,
+      });
+      return res.status(201).json({
+        success: true,
+        transaction_url: payment.source.transaction_url,
+        message: 'Payment initiated, redirect to 3DS',
       });
     }
 
-    if (Object.keys(orderUpdate).length) {
-      await OrderModel.findByIdAndUpdate(order._id, orderUpdate);
-    }
-
-    res.status(201).json({ success: true, payment });
+    return res.status(201).json({ success: true, payment });
 
   } catch (error) {
-    console.error('Payment Error:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      success: false,
-      message: 'Payment failed',
-      error: error.response?.data || error.message
-    });
+    return res.status(500).json({ success: false, message: 'Payment creation failed', error: error.response?.data || error.message });
   }
 };
+
+/* ------------------------------- refund ---------------------------------- */
 export const refundPayment = async (req, res) => {
   try {
-    const paymentId = req.params.id || req.body.paymentId;
+    const paymentId = req.params.id;
+    if (!paymentId) return res.status(400).json({ success: false, message: 'paymentId required' });
 
+    const { data: refund } = await axios.post(`${MOYASAR_API_URL}/payments/${paymentId}/refund`, {}, { auth: { username: MOYASAR_SECRET_KEY, password: '' } });
 
-    if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        message: 'paymentId (or :id param) is required',
-      });
-    }
+    const orderId = refund?.metadata?.order_id;
+    if (orderId) await OrderModel.findByIdAndUpdate(orderId, { status: 'refunded', paid: false });
 
-    const url = `${MOYASAR_API_URL}/payments/${encodeURIComponent(paymentId)}/refund`;
-    const data = typeof amount === 'number' ? { amount } : {};
-
-    const response = await axios.post(url, data, {
-      auth: {
-        username: MOYASAR_SECRET_KEY,
-        password: ''
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-    const refund = response.data;
-    const refundedOrderId = refund?.metadata?.order_id;
-    if (refundedOrderId) {
-      await OrderModel.findByIdAndUpdate(refundedOrderId, {
-        status: 'refunded',
-        paid: false,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      refund,
-    });
+    return res.json({ success: true, refund });
   } catch (error) {
-    return res.status(error.response?.status || 500).json({
-      success: false,
-      message: 'Refund failed',
-      error: error.response?.data || error.message,
-    });
+    return res.status(500).json({ success: false, message: 'Refund failed', error: error.response?.data || error.message });
   }
-}
+};
 
+/* ------------------------------- webhook --------------------------------- */
 export const handleMoyasarWebhook = async (req, res) => {
-  try {
-    const payload = (req.method === 'GET' ? req.query : req.body) || {};
+  const isBrowserCallback = req.method === 'GET';
+  const frontendBaseUrl = (process.env.FRONTEND_BASE_URL || '').replace(/\/$/, '');
+  const frontendSuccessUrl = process.env.FRONTEND_PAYMENT_SUCCESS_URL || `${frontendBaseUrl}/payment/success`;
+  const frontendFailedUrl = process.env.FRONTEND_PAYMENT_FAILED_URL || `${frontendBaseUrl}/payment/failed`;
 
-    const paymentId = payload.id || payload.paymentId;
+  try {
+    const payload = isBrowserCallback ? req.query : req.body;
+    const paymentId = payload?.id || payload?.paymentId || payload?.data?.id;
+
     if (!paymentId) {
-      return res.status(400).json({ success: false, message: 'Missing payment identifier' });
+      if (isBrowserCallback) return res.redirect(`${frontendFailedUrl}?status=failed&message=Missing_Payment_ID`);
+      return res.status(400).json({ success: false, message: 'Missing payment ID' });
     }
 
     let paymentDetails;
-    try {
-      paymentDetails = await fetchPaymentDetails(paymentId);
-    } catch (fetchError) {
-      console.error('Failed to fetch payment from Moyasar:', fetchError.response?.data || fetchError.message);
+    try { paymentDetails = await fetchPaymentDetails(paymentId); } 
+    catch (err) {
+      console.error('Failed to fetch payment:', err?.response?.data || err.message);
+      if (isBrowserCallback) return res.redirect(`${frontendFailedUrl}?status=failed&paymentId=${paymentId}&message=Payment_Fetch_Failed`);
+      return res.status(500).json({ success: false, message: 'Payment fetch failed' });
     }
 
-    const status = (paymentDetails?.status || payload.status || '').toLowerCase();
-    if (!status) {
-      return res.status(400).json({ success: false, message: 'Missing payment status' });
-    }
+    const status = paymentDetails.status?.toLowerCase();
+    const metadata = parseMetadata(paymentDetails.metadata);
+    const orderId = metadata?.order_id;
 
-    const metadata = parseMetadata(paymentDetails?.metadata || payload.metadata);
-    const orderId = payload.order_id || metadata?.order_id;
+    console.log('Moyasar payment status fetched:', { paymentId, status, orderId });
+
     if (!orderId) {
-      return res.status(400).json({ success: false, message: 'Missing order_id in payload or metadata' });
+      if (isBrowserCallback) return res.redirect(`${frontendFailedUrl}?status=${status}&paymentId=${paymentId}&message=Missing_Order_ID`);
+      return res.status(400).json({ success: false, message: 'Missing order_id in metadata' });
     }
 
-    const source = paymentDetails?.source || payload.source || {};
-    const amount = paymentDetails?.amount ?? payload.amount ?? null;
-    const callbackUrl = payload.callback_url || paymentDetails?.callback_url || null;
-
-    const updateData = {
-      paymentInfo: {
-        id: paymentId,
-        status,
-        amount,
-        callbackUrl,
-        source: {
-          type: source?.type,
-          company: source?.company,
-          number: source?.number,
-          transactionUrl: source?.transaction_url,
-        },
-      },
-      paymentMethod: source?.type || 'moyasar',
-      paymentStatus: status,
-      updatedVia: 'moyasar_webhook',
-    };
-
-    if (['paid', 'authorized', 'captured'].includes(status)) {
-      updateData.status = 'confirmed';
-      updateData.paid = true;
-      updateData.paidAt = new Date();
-    } else if (['failed', 'declined', 'cancelled'].includes(status)) {
-      updateData.status = 'cancelled';
-      updateData.paid = false;
-    } else if (status === 'refunded') {
-      updateData.status = 'refunded';
-      updateData.paid = false;
-    } else {
-      updateData.status = 'pending';
-      updateData.paid = false;
-    }
-
-    const updatedOrder = await OrderModel.findByIdAndUpdate(orderId, updateData, { new: true });
-
-    if (!updatedOrder) {
+    const order = await OrderModel.findById(orderId);
+    if (!order) {
+      if (isBrowserCallback) return res.redirect(`${frontendFailedUrl}?status=${status}&paymentId=${paymentId}&orderId=${orderId}&message=Order_Not_Found`);
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    if (['paid', 'authorized', 'captured'].includes(status)) {
-      const alreadyShipped = ['shipped', 'delivered'].includes(updatedOrder?.status);
-      if (!alreadyShipped && !updatedOrder?.trackingNumber) {
-        const hydratedOrder = await OrderModel.findById(orderId)
-          .populate({ path: 'items.product', select: 'name_ar name_en sku price otoProductId coverImage images' })
-          .populate('user', 'firstName lastName email phone')
-          .lean();
+    let newOrderStatus = 'pending';
+    let paid = false;
 
-        const otoPayload = buildOtoOrderPayload(hydratedOrder);
-        const otoResponse = await createOtoOrder(otoPayload);
+    if (['paid', 'captured'].includes(status)) { newOrderStatus = 'confirmed'; paid = true; }
+    else if (status === 'initiated') {
+      newOrderStatus = 'pending';
+      paid = false;
+      console.log('Payment still initiated, waiting for 3DS completion:', {
+        paymentId,
+        transactionUrl: paymentDetails?.source?.transaction_url,
+      });
+    }
+    else if (['failed', 'declined', 'cancelled'].includes(status)) newOrderStatus = 'cancelled';
 
-        const trackingNumber =
-          otoResponse?.data?.trackingNumber ||
-          otoResponse?.trackingNumber ||
-          otoResponse?.data?.tracking_number ||
-          otoResponse?.tracking_number ||
-          undefined;
-        const trackingUrl =
-          otoResponse?.data?.trackingUrl ||
-          otoResponse?.trackingUrl ||
-          otoResponse?.data?.tracking_url ||
-          otoResponse?.tracking_url ||
-          undefined;
+    await OrderModel.findByIdAndUpdate(orderId, {
+      paymentStatus: status,
+      status: newOrderStatus,
+      paid,
+      paymentInfo: paymentDetails,
+      updatedVia: 'moyasar_webhook',
+      ...(paid ? { paidAt: new Date() } : {}),
+    });
 
-        await OrderModel.findByIdAndUpdate(orderId, {
-          status: 'shipped',
-          ...(trackingNumber ? { trackingNumber } : {}),
-          ...(trackingUrl ? { trackingUrl } : {}),
-        });
+    if (paid) {
+      const lockedOrder = await OrderModel.findOneAndUpdate(
+        { _id: orderId, trackingNumber: { $exists: false }, shipmentCreating: { $ne: true } },
+        { $set: { shipmentCreating: true } },
+        { new: true }
+      );
+
+      if (lockedOrder) {
+        try {
+          const hydratedOrder = await OrderModel.findById(orderId)
+            .populate({ path: 'items.product', select: 'name_en name_ar sku price otoProductId coverImage images' })
+            .populate('user', 'firstName lastName email phone')
+            .lean();
+
+          const otoPayload = buildOtoOrderPayload(hydratedOrder);
+          const otoResponse = await createOtoOrder(otoPayload);
+
+          const trackingNumber = otoResponse?.data?.trackingNumber || otoResponse?.trackingNumber || otoResponse?.data?.tracking_number || otoResponse?.tracking_number;
+          const trackingUrl = otoResponse?.data?.trackingUrl || otoResponse?.trackingUrl || otoResponse?.data?.tracking_url || otoResponse?.tracking_url;
+
+          if (trackingNumber) {
+            await OrderModel.findByIdAndUpdate(orderId, { status: 'shipped', trackingNumber, ...(trackingUrl ? { trackingUrl } : {}), $unset: { shipmentCreating: '' } });
+          } else { await OrderModel.findByIdAndUpdate(orderId, { $unset: { shipmentCreating: '' } }); }
+        } catch (err) { await OrderModel.findByIdAndUpdate(orderId, { $unset: { shipmentCreating: '' } }); }
       }
     }
 
-    console.log(`✅ Order ${orderId} updated via Moyasar callback (${status})`);
-
-    if (req.method === 'GET') {
-      const frontendBaseUrl =
-        process.env.FRONTEND_BASE_URL ||
-        process.env.CLIENT_URL ||
-        `${req.protocol}://${req.get('host')}`;
-      const success = ['paid', 'authorized', 'captured'].includes(status);
-      const message = success ? 'Payment succeeded' : 'Payment failed';
-      const redirectUrl = new URL(frontendBaseUrl);
-      redirectUrl.searchParams.set('paymentStatus', success ? 'success' : 'failed');
-      redirectUrl.searchParams.set('message', message);
+    if (isBrowserCallback) {
+      if (status === 'initiated') return res.redirect(paymentDetails.source.transaction_url);
+      const redirectUrl = new URL(['paid','captured'].includes(status) ? frontendSuccessUrl : frontendFailedUrl);
+      redirectUrl.searchParams.set('status', status);
+      redirectUrl.searchParams.set('paymentId', paymentId);
       redirectUrl.searchParams.set('orderId', orderId);
       return res.redirect(302, redirectUrl.toString());
     }
 
-    return res.status(200).json({
-      success: true,
-      orderId,
-      paymentStatus: status,
-      paid: !!updateData.paid,
-      statusUpdatedTo: updateData.status,
-    });
+    return res.status(200).json({ success: true, orderId, paymentStatus: status, paid, orderStatus: newOrderStatus });
+
   } catch (error) {
-    console.error('Webhook Error:', error);
-    return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    console.error('Webhook Fatal Error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+/* ------------------------------- cancel ---------------------------------- */
 export const cancelPayment = async (req, res) => {
   try {
-    const orderId = req.params.id;
-    const order = await OrderModel.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
+    const order = await OrderModel.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
     order.status = 'cancelled';
     order.paid = false;
     await order.save();
-    return res.status(200).json({ success: true, message: 'Order cancelled successfully' });
+
+    return res.json({ success: true });
   } catch (error) {
-    console.error('Cancel Payment Error:', error);
-    return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    return res.status(500).json({ success: false, message: 'Cancel failed', error: error.message });
   }
-}
+};

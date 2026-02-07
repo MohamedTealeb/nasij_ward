@@ -54,10 +54,14 @@ export const createOtoProduct = async ({
         Authorization: `Bearer ${token}`,
       },
     });
+    console.log("OTO createProduct success:", {
+      sku,
+      productId: response?.data?.data?.id || response?.data?.id || null,
+    });
     return response.data;
   } catch (err) {
     console.error("Error creating OTO product:", err?.response?.data || err.message);
-    throw new Error("Failed to create product in OTO");
+    throw err;
   }
 };
 
@@ -132,9 +136,20 @@ export const createOtoOrder = async ({
         Authorization: `Bearer ${token}`,
       },
     });
+    console.log("OTO createOrder success:", {
+      orderId,
+      otoOrderId: response?.data?.data?.id || response?.data?.id || null,
+      trackingNumber:
+        response?.data?.data?.trackingNumber ||
+        response?.data?.trackingNumber ||
+        response?.data?.data?.tracking_number ||
+        response?.data?.tracking_number ||
+        null,
+    });
     return response.data;
   } catch (err) {
-    console.error("Error creating OTO order:", err?.response?.data || err.message);
-    throw new Error("Failed to create order in OTO");
+    const errorDetails = err?.response?.data || err.message;
+    console.error(`Error creating OTO order (Status: ${err?.response?.status}):`, JSON.stringify(errorDetails, null, 2));
+    throw err; // Re-throw original error to allow upstream handling/logging of details
   }
 };
