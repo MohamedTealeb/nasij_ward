@@ -107,9 +107,8 @@ orderSchema.pre('save', async function(next) {
     this.taxPrice = computedTax;
   }
   if (typeof this.totalPrice === 'number') {
-    const shipping = typeof this.shippingCost === 'number' ? this.shippingCost : 0;
     const tax = typeof this.taxPrice === 'number' ? this.taxPrice : 0;
-    const computedFinal = Math.round((this.totalPrice + tax + shipping) * 100) / 100;
+    const computedFinal = Math.round((this.totalPrice + tax) * 100) / 100;
     this.finalPrice = computedFinal;
   }
   if (!this.orderNumber) {

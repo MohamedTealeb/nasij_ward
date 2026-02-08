@@ -4,14 +4,50 @@ import { ProductModel } from "../../config/models/product.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
 import { getOtoAccessToken } from "../shipment/shipment.service.js";
 
+const normalizeCity = (value) => String(value || "").trim().toLowerCase();
+
+const SHIPPING_ZONES = {
+  zone1: new Set(["riyadh", "al kharj", "diriyah", "al muzahmiyah"].map(normalizeCity)),
+  zone2: new Set(["jeddah", "makkah", "madinah", "dammam", "khobar", "dhahran", "taif"].map(normalizeCity)),
+  zone3: new Set(["abha", "jazan", "tabuk", "hail", "najran", "arar", "sakaka", "al baha"].map(normalizeCity)),
+};
+
+const SHIPPING_RATES = {
+  standard: {
+    zone1: { under200: 25, under600: 15, over600: 0 },
+    zone2: { under200: 28, under600: 18, over600: 0 },
+    zone3: { under200: 32, under600: 22, over600: 15 },
+  },
+  bulky: {
+    zone1: { under200: 30, under600: 20, over600: 0 },
+    zone2: { under200: 35, under600: 25, over600: 0 },
+    zone3: { under200: 42, under600: 30, over600: 20 },
+  },
+};
+
+const resolveShippingZone = (city) => {
+  const normalized = normalizeCity(city);
+  if (SHIPPING_ZONES.zone1.has(normalized)) return "zone1";
+  if (SHIPPING_ZONES.zone2.has(normalized)) return "zone2";
+  if (SHIPPING_ZONES.zone3.has(normalized)) return "zone3";
+  return null;
+};
+
+const calculateShippingCost = ({ zone, total, shippingType }) => {
+  const rates = SHIPPING_RATES[shippingType]?.[zone];
+  if (!rates) return null;
+  if (total < 200) return rates.under200;
+  if (total < 600) return rates.under600;
+  return rates.over600;
+};
 
 const orderProductPopulate = {
   path: "items.product",
-  select: "name slug sku price salePrice coverImage images stock",
+  select: "name slug sku price salePrice coverImage images stock shippingType",
 };
 export const createOrder = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
-  const { shippingAddress, paymentMethod, notes, shippingCost } = req.body;
+  const { shippingAddress, paymentMethod, notes } = req.body;
   
   let cart = await CartModel.findOne({ user: userId, status: "active" }).populate("items.product");
   
@@ -38,10 +74,29 @@ export const createOrder = asyncHandler(async (req, res, next) => {
   }));
   
   const subtotal = orderItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
-  
-  
-  
-  const totalPrice = subtotal ;
+
+  const shippingType = cart.items.some(
+    (item) => String(item.product?.shippingType || "standard").toLowerCase() === "bulky"
+  )
+    ? "bulky"
+    : "standard";
+
+  const zone = resolveShippingZone(shippingAddress?.city);
+  if (!zone) {
+    return next(new Error("Unsupported shipping city. Please update the address city.", { cause: 400 }));
+  }
+
+  const shippingCost = calculateShippingCost({
+    zone,
+    total: subtotal,
+    shippingType,
+  });
+
+  if (shippingCost === null || Number.isNaN(shippingCost)) {
+    return next(new Error("Failed to calculate shipping cost.", { cause: 500 }));
+  }
+
+  const totalPrice = subtotal + shippingCost;
   
   const order = await OrderModel.create({
     user: userId,
@@ -50,7 +105,7 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     shippingAddress,
     paymentMethod: paymentMethod ,
     notes: notes || "",
-    shippingCost: shippingCost,
+    shippingCost,
   });
 
   for (const item of cart.items) {

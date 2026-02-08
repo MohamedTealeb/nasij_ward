@@ -52,6 +52,11 @@ const productSchema = new mongoose.Schema(
     colors: [colorSchema], 
     sizes: { type: [String], default: [] },
     stock: { type: Number, default: 0, min: 0 },
+    shippingType: {
+      type: String,
+      enum: ["standard", "bulky"],
+      default: "standard",
+    },
   },
   { timestamps: true }
 );

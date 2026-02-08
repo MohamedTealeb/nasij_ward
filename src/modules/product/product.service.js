@@ -6,6 +6,9 @@ import path from "path";
 import { createOtoProduct } from "../shipment/shipment.service.js";
 import { v4 as uuidv4 } from "uuid";
 
+const isValidShippingType = (value) =>
+  ["standard", "bulky"].includes(String(value || "").toLowerCase());
+
 export const allProducts = asyncHandler(async (req, res, next) => {
   const { id, name, category, color, size, minPrice, maxPrice, page = 1, limit = 10 } = req.query;
 
@@ -112,7 +115,12 @@ export const addProduct = asyncHandler(async (req, res, next) => {
     stock,
     care_instruction_ar,
     care_instruction_en,
+    shippingType,
   } = req.body;
+
+  if (shippingType && !isValidShippingType(shippingType)) {
+    return next(new Error("Invalid shipping type. Use standard or bulky.", { cause: 400 }));
+  }
 
   const categoryExists = await CategoryModel.findById(category);
   if (!categoryExists) {
@@ -194,6 +202,7 @@ export const addProduct = asyncHandler(async (req, res, next) => {
     stock,
     care_instruction_ar,
     care_instruction_en,
+    shippingType: shippingType ? String(shippingType).toLowerCase() : "standard",
   });
 
   return successResponse({
@@ -210,7 +219,7 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
     return next(new Error("Product not found", { cause: 404 }));
   }
 
-  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock, care_instruction_ar, care_instruction_en } = req.body;
+  const { name_ar, name_en, description_ar, description_en, price, category, colors, sizes, stock, care_instruction_ar, care_instruction_en, shippingType } = req.body;
   const updateData = {};
 
   // ✅ 1. التأكد من صلاحية الـ Category لو اتغيرت
@@ -282,6 +291,12 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
   if (care_instruction_ar) updateData.care_instruction_ar = care_instruction_ar;
   if (care_instruction_en) updateData.care_instruction_en = care_instruction_en;
   if (stock !== undefined) updateData.stock = stock;
+  if (shippingType) {
+    if (!isValidShippingType(shippingType)) {
+      return next(new Error("Invalid shipping type. Use standard or bulky.", { cause: 400 }));
+    }
+    updateData.shippingType = String(shippingType).toLowerCase();
+  }
 
   // ✅ 7. تحديث المنتج في قاعدة البيانات
   const updatedProduct = await ProductModel.findByIdAndUpdate(id, updateData, {
