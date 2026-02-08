@@ -103,7 +103,8 @@ export const createPayment = async (req, res) => {
     const order = await OrderModel.findOne({ _id: orderId, user: req.user._id });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    const amount = Math.round(Number(order.totalPrice) * 100);
+    const orderAmount = order.finalPrice ?? order.totalPrice;
+    const amount = Math.round(Number(orderAmount) * 100);
 
     const backendBaseUrl = (process.env.BACKEND_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
     const callbackUrl = `${backendBaseUrl}/payment/callback/moyasar`;
