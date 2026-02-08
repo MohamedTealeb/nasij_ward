@@ -98,8 +98,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// إنشاء فهرس sparse فريد على trackingNumber (يتجاهل القيم null)
-orderSchema.index({ trackingNumber: 1 }, { unique: true, sparse: true });
+// NOTE: trackingNumber uniqueness disabled per requirements
 
 orderSchema.pre('save', async function(next) {
   if (typeof this.totalPrice === 'number') {
