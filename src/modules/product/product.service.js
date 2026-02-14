@@ -168,13 +168,26 @@ export const addProduct = asyncHandler(async (req, res, next) => {
 
   let otoProductId = "";
   try {
+    // Build full URL for the image instead of relative path
+    const imageUrl = coverImage || images[0];
+    const fullImageUrl = imageUrl 
+      ? `${process.env.BACKEND_BASE_URL}${imageUrl}` 
+      : "";
+
+    console.log("Creating OTO product with data:", {
+      name: name_en || name_ar,
+      sku,
+      price: Number(price),
+      imageUrl: fullImageUrl
+    });
+
     const otoProduct = await createOtoProduct({
       name: name_en || name_ar,
       sku,
       price: Number(price),
       description: description_en || description_ar,
       categoryName: categoryExists?.name_en || categoryExists?.name_ar || "",
-      image: coverImage || images[0] || "",
+      image: fullImageUrl,
       taxAmount: 0,
     });
     otoProductId =
@@ -182,8 +195,15 @@ export const addProduct = asyncHandler(async (req, res, next) => {
       otoProduct?.id ||
       otoProduct?.productId ||
       "";
+    
+    console.log("OTO Product created successfully with ID:", otoProductId);
   } catch (err) {
-    return next(new Error("Failed to create product in OTO service", { cause: 502 }));
+    console.error("Detailed OTO error:", {
+      message: err.message,
+      response: err?.response?.data,
+      status: err?.response?.status
+    });
+    return next(new Error(`Failed to create product in OTO service: ${err.message}`, { cause: 502 }));
   }
 
   const product = await ProductModel.create({
