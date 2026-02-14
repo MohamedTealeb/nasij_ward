@@ -3,8 +3,7 @@ import { OrderModel } from '../../config/models/order.model.js';
 import { createOtoOrder } from '../shipment/shipment.service.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const MOYASAR_SECRET_KEY =
-  process.env.MOYASAR_SECRET_KEY || 'sk_test_cxC3oG9nj6UFx4BgkcXCUyZU42i9Lwe2wsU6FXk6';
+const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY || '';
 const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
 
 /* -------------------------------- utils -------------------------------- */
