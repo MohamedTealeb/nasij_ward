@@ -36,10 +36,10 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    taxPrice: {
-      type: Number,
-      default: 0,
-    },
+    // taxPrice: {
+    //   type: Number,
+    //   default: 0,
+    // },
     finalPrice: {
       type: Number,
       default: 0,
@@ -101,13 +101,17 @@ const orderSchema = new mongoose.Schema(
 // NOTE: trackingNumber uniqueness disabled per requirements
 
 orderSchema.pre('save', async function(next) {
+  // Tax calculation disabled - not used currently
+  // if (typeof this.totalPrice === 'number') {
+  //   const computedTax = Math.round(this.totalPrice * 0.15 * 100) / 100;
+  //   this.taxPrice = computedTax;
+  // }
+  
+  // Calculate final price without tax
   if (typeof this.totalPrice === 'number') {
-    const computedTax = Math.round(this.totalPrice * 0.15 * 100) / 100;
-    this.taxPrice = computedTax;
-  }
-  if (typeof this.totalPrice === 'number') {
-    const tax = typeof this.taxPrice === 'number' ? this.taxPrice : 0;
-    const computedFinal = Math.round((this.totalPrice + tax) * 100) / 100;
+    // const tax = typeof this.taxPrice === 'number' ? this.taxPrice : 0;
+    // const computedFinal = Math.round((this.totalPrice + tax) * 100) / 100;
+    const computedFinal = Math.round(this.totalPrice * 100) / 100;
     this.finalPrice = computedFinal;
   }
   if (!this.orderNumber) {

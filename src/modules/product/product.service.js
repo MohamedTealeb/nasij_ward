@@ -168,17 +168,22 @@ export const addProduct = asyncHandler(async (req, res, next) => {
 
   let otoProductId = "";
   try {
-    // Build full URL for the image instead of relative path
+    // Build full URL for the image
+    // NOTE: OTO API cannot access localhost URLs, so we skip image for now
+    // When deployed to production, use the production domain URL
     const imageUrl = coverImage || images[0];
-    const fullImageUrl = imageUrl 
-      ? `${process.env.BACKEND_BASE_URL}${imageUrl}` 
-      : "";
+    let fullImageUrl = "";
+    
+    // Only send image if we have a public URL (not localhost)
+    if (imageUrl && process.env.BACKEND_BASE_URL && !process.env.BACKEND_BASE_URL.includes('localhost')) {
+      fullImageUrl = `${process.env.BACKEND_BASE_URL}${imageUrl}`;
+    }
 
     console.log("Creating OTO product with data:", {
       name: name_en || name_ar,
       sku,
       price: Number(price),
-      imageUrl: fullImageUrl
+      imageUrl: fullImageUrl || "(no image - localhost not accessible to OTO)"
     });
 
     const otoProduct = await createOtoProduct({
@@ -188,7 +193,7 @@ export const addProduct = asyncHandler(async (req, res, next) => {
       description: description_en || description_ar,
       categoryName: categoryExists?.name_en || categoryExists?.name_ar || "",
       image: fullImageUrl,
-      taxAmount: 0,
+      taxAmount: 0, // Required by OTO API (even if we don't use tax in our system)
     });
     otoProductId =
       otoProduct?.data?.id ||

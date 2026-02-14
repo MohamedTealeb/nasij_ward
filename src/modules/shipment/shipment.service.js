@@ -30,22 +30,40 @@ export const createOtoProduct = async ({
   description = "",
   categoryName = "",
   image = "",
-  taxAmount = 0,
+  taxAmount = 0, // Required by OTO API
 }) => {
   if (!name || !sku || price === undefined) {
     throw new Error("Missing required product data for OTO payload");
   }
 
   const token = await getOtoAccessToken();
+  
+  // Limit description length - OTO has a max length limit (appears to be ~255 characters)
+  const maxDescriptionLength = 250;
+  const truncatedDescription = description 
+    ? (description.length > maxDescriptionLength 
+        ? description.substring(0, maxDescriptionLength) + "..." 
+        : description)
+    : "";
+  
+  // Build payload - only include image if it exists and is valid
   const payload = {
     productName: name,
     sku,
     price,
-    taxAmount,
-    description,
-    category: categoryName,
-    image,
+    taxAmount, // Required by OTO API
+    description: truncatedDescription,
+    category: categoryName || "",
   };
+
+  // Only add image if it exists
+  if (image && image.trim()) {
+    payload.image = image;
+  }
+
+  console.log("=== OTO Product Payload ===");
+  console.log(JSON.stringify(payload, null, 2));
+  console.log("=========================");
 
   try {
     const response = await axios.post(`${process.env.OTO_API_BASE}/rest/v2/createProduct`, payload, {
@@ -60,7 +78,11 @@ export const createOtoProduct = async ({
     });
     return response.data;
   } catch (err) {
-    console.error("Error creating OTO product:", err?.response?.data || err.message);
+    console.error("=== OTO Error Details ===");
+    console.error("Status:", err?.response?.status);
+    console.error("Error Data:", JSON.stringify(err?.response?.data, null, 2));
+    console.error("Error Message:", err.message);
+    console.error("=========================");
     throw err;
   }
 };
