@@ -3,15 +3,7 @@ import { OrderModel } from '../../config/models/order.model.js';
 import { createOtoOrder } from '../shipment/shipment.service.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY || '';
 const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
-
-// Verify API key is loaded (without exposing the actual value)
-if (!MOYASAR_SECRET_KEY) {
-  console.error('⚠️ MOYASAR_SECRET_KEY is not set in environment variables!');
-} else {
-  console.log('✅ Moyasar API configured successfully');
-}
 
 /* -------------------------------- utils -------------------------------- */
 const parseMetadata = (metadata) => {
@@ -29,7 +21,7 @@ const parseMetadata = (metadata) => {
 const fetchPaymentDetails = async (paymentId) => {
   const url = `${MOYASAR_API_URL}/payments/${encodeURIComponent(paymentId)}`;
   const { data } = await axios.get(url, {
-    auth: { username: MOYASAR_SECRET_KEY, password: '' },
+    auth: { username: process.env.MOYASAR_SECRET_KEY, password: '' },
     headers: { Accept: 'application/json' },
   });
   return data;
@@ -130,14 +122,14 @@ export const createPayment = async (req, res) => {
     console.log('=== Creating Moyasar Payment ===');
     console.log('Amount (in halalas):', amount);
     console.log('Order ID:', order._id);
-    console.log('API Key configured:', !!MOYASAR_SECRET_KEY);
+    console.log('API Key configured:', !!process.env.MOYASAR_SECRET_KEY);
     console.log('================================');
 
     const { data: payment } = await axios.post(
       `${MOYASAR_API_URL}/payments`,
       paymentPayload,
       { 
-        auth: { username: MOYASAR_SECRET_KEY, password: '' }, 
+        auth: { username: process.env.MOYASAR_SECRET_KEY, password: '' }, 
         headers: { 'Content-Type': 'application/json' } 
       }
     );
@@ -189,7 +181,7 @@ export const refundPayment = async (req, res) => {
     const paymentId = req.params.id;
     if (!paymentId) return res.status(400).json({ success: false, message: 'paymentId required' });
 
-    const { data: refund } = await axios.post(`${MOYASAR_API_URL}/payments/${paymentId}/refund`, {}, { auth: { username: MOYASAR_SECRET_KEY, password: '' } });
+    const { data: refund } = await axios.post(`${MOYASAR_API_URL}/payments/${paymentId}/refund`, {}, { auth: { username: process.env.MOYASAR_SECRET_KEY, password: '' } });
 
     const orderId = refund?.metadata?.order_id;
     if (orderId) await OrderModel.findByIdAndUpdate(orderId, { status: 'refunded', paid: false });
