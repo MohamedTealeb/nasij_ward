@@ -6,6 +6,13 @@ import { v4 as uuidv4 } from 'uuid';
 const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY || '';
 const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
 
+// Verify API key is loaded (without exposing the actual value)
+if (!MOYASAR_SECRET_KEY) {
+  console.error('⚠️ MOYASAR_SECRET_KEY is not set in environment variables!');
+} else {
+  console.log('✅ Moyasar API configured successfully');
+}
+
 /* -------------------------------- utils -------------------------------- */
 const parseMetadata = (metadata) => {
   if (!metadata) return {};
@@ -120,10 +127,19 @@ export const createPayment = async (req, res) => {
       metadata: { order_id: String(order._id), user_id: String(order.user) },
     };
 
+    console.log('=== Creating Moyasar Payment ===');
+    console.log('Amount (in halalas):', amount);
+    console.log('Order ID:', order._id);
+    console.log('API Key configured:', !!MOYASAR_SECRET_KEY);
+    console.log('================================');
+
     const { data: payment } = await axios.post(
       `${MOYASAR_API_URL}/payments`,
       paymentPayload,
-      { auth: { username: MOYASAR_SECRET_KEY, password: '' }, headers: { 'Content-Type': 'application/json' } }
+      { 
+        auth: { username: MOYASAR_SECRET_KEY, password: '' }, 
+        headers: { 'Content-Type': 'application/json' } 
+      }
     );
 
     console.log('Payment Creation - Callback URL:', callbackUrl);
@@ -157,6 +173,12 @@ export const createPayment = async (req, res) => {
     return res.status(201).json({ success: true, payment });
 
   } catch (error) {
+    console.error('=== Payment Creation Error ===');
+    console.error('Error type:', error.response?.data?.type);
+    console.error('Error message:', error.response?.data?.message);
+    console.error('Status code:', error.response?.status);
+    console.error('Full error:', JSON.stringify(error.response?.data, null, 2));
+    console.error('============================');
     return res.status(500).json({ success: false, message: 'Payment creation failed', error: error.response?.data || error.message });
   }
 };

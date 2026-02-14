@@ -1,6 +1,14 @@
 import path from 'node:path';
 import * as dotenv from 'dotenv'
-dotenv.config({path:path.join('./.env')})
+// Load .env from project root
+dotenv.config({ path: path.resolve(process.cwd(), '.env') })
+
+console.log('=== Environment Check ===');
+console.log('MOYASAR_SECRET_KEY loaded:', !!process.env.MOYASAR_SECRET_KEY);
+console.log('OTO_API_KEY loaded:', !!process.env.OTO_API_KEY);
+console.log('PORT:', process.env.PORT);
+console.log('========================');
+
 import express from 'express'
 import cors from 'cors'
 import swaggerUi from 'swagger-ui-express'
